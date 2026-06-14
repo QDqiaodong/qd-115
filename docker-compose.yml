@@ -1,0 +1,98 @@
+x-common-env: &common-env
+  TZ: Asia/Shanghai
+  LANG: C.UTF-8
+
+services:
+  mysql:
+    image: ${DOCKER_REGISTRY}mysql:8.0
+    container_name: ${COMPOSE_PROJECT_NAME}-mysql
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "127.0.0.1:${MYSQL_PORT}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command:
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --lower-case-table-names=1
+      --innodb-buffer-pool-size=128M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: ${DOCKER_REGISTRY}redis:7.2-alpine
+    container_name: ${COMPOSE_PROJECT_NAME}-redis
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+    ports:
+      - "127.0.0.1:${REDIS_PORT}:6379"
+    volumes:
+      - redis-data:/data
+    command: >
+        redis-server
+        --maxmemory 128mb
+        --maxmemory-policy allkeys-lru
+        --appendonly yes
+        --save 60 1000
+        --timeout 300
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY}
+    container_name: ${COMPOSE_PROJECT_NAME}-backend
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      BACKEND_PORT: 8088
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "127.0.0.1:${BACKEND_PORT}:8088"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY}
+    container_name: ${COMPOSE_PROJECT_NAME}-frontend
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT}:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql-data:
+  redis-data:

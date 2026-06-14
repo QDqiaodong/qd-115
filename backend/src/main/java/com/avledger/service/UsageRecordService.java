@@ -1,0 +1,81 @@
+package com.avledger.service;
+
+import com.avledger.entity.Device;
+import com.avledger.entity.UsageRecord;
+import com.avledger.repository.DeviceRepository;
+import com.avledger.repository.UsageRecordRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+public class UsageRecordService {
+
+    private final UsageRecordRepository usageRecordRepository;
+    private final DeviceRepository deviceRepository;
+
+    public List<UsageRecord> findByDeviceId(Long deviceId) {
+        return usageRecordRepository.findByDeviceIdOrderByUsageDateDesc(deviceId);
+    }
+
+    public Map<String, Object> getUsageStatsByDevice(Long deviceId) {
+        Map<String, Object> stats = new HashMap<>();
+        Integer total = usageRecordRepository.sumDurationByDeviceId(deviceId);
+        Long count = usageRecordRepository.countByDeviceId(deviceId);
+        LocalDate monthStart = LocalDate.now().withDayOfMonth(1);
+        Integer monthly = usageRecordRepository.sumDurationByDeviceIdAndDateAfter(deviceId, monthStart);
+
+        stats.put("totalMinutes", total != null ? total : 0);
+        stats.put("totalHours", total != null ? Math.round(total / 60.0 * 10) / 10.0 : 0.0);
+        stats.put("monthlyMinutes", monthly != null ? monthly : 0);
+        stats.put("monthlyHours", monthly != null ? Math.round(monthly / 60.0 * 10) / 10.0 : 0.0);
+        stats.put("count", count != null ? count : 0L);
+        stats.put("avgMinutes", count != null && count > 0 ? Math.round((total != null ? total : 0) * 10.0 / count) / 10.0 : 0.0);
+        return stats;
+    }
+
+    public Integer getTotalUsageByDevice(Long deviceId) {
+        Integer total = usageRecordRepository.sumDurationByDeviceId(deviceId);
+        return total != null ? total : 0;
+    }
+
+    @Transactional
+    public UsageRecord save(UsageRecord usageRecord, Long deviceId) {
+        Device device = deviceRepository.findById(deviceId)
+                .orElseThrow(() -> new IllegalArgumentException("Device not found with id: " + deviceId));
+        usageRecord.setDevice(device);
+        return usageRecordRepository.save(usageRecord);
+    }
+
+    @Transactional
+    public Optional<UsageRecord> update(Long id, UsageRecord usageRecord) {
+        return usageRecordRepository.findById(id).map(existing -> {
+            existing.setUsageDate(usageRecord.getUsageDate());
+            existing.setDurationMinutes(usageRecord.getDurationMinutes());
+            existing.setScenario(usageRecord.getScenario());
+            existing.setRemark(usageRecord.getRemark());
+            if (usageRecord.getDevice() != null && usageRecord.getDevice().getId() != null) {
+                Device device = deviceRepository.findById(usageRecord.getDevice().getId())
+                        .orElseThrow(() -> new IllegalArgumentException("Device not found"));
+                existing.setDevice(device);
+            }
+            return usageRecordRepository.save(existing);
+        });
+    }
+
+    @Transactional
+    public boolean delete(Long id) {
+        if (usageRecordRepository.existsById(id)) {
+            usageRecordRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+}

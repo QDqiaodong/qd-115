@@ -1,0 +1,53 @@
+package com.avledger.entity;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Table(name = "repair_record")
+public class RepairRecord {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "device_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Device device;
+
+    @Column(nullable = false)
+    private LocalDateTime repairTime;
+
+    @Column(columnDefinition = "TEXT", nullable = false)
+    private String symptom;
+
+    @Column(columnDefinition = "TEXT")
+    private String cause;
+
+    @Column(columnDefinition = "TEXT")
+    private String fixMethod;
+
+    @Column(length = 50)
+    private String repairPerson;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal cost;
+
+    @Column(length = 255)
+    private String remark;
+
+    @CreationTimestamp
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
+}
