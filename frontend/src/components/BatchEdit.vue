@@ -13,7 +13,7 @@
       </el-select>
       <el-button type="primary" :disabled="!hasSelection" @click="applyBatch">批量应用</el-button>
     </div>
-    <el-table ref="tableRef" :data="devices" @selection-change="onSelectionChange" height="400">
+    <el-table ref="tableRef" :data="localDevices" @selection-change="onSelectionChange" height="400">
       <el-table-column type="selection" width="50" />
       <el-table-column prop="name" label="设备名称" width="140" />
       <el-table-column prop="model" label="型号" width="160" />
@@ -49,6 +49,7 @@ const tableRef = ref(null)
 const selection = ref([])
 const batchLocation = ref('')
 const batchStatus = ref('')
+const localDevices = ref([])
 
 const typeMap = { SPEAKER: '音响', PROJECTOR: '投影仪', PLAYER: '播放器', AMPLIFIER: '功放' }
 const typeMapStatus = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '维修中', RETIRED: '退役' }
@@ -67,13 +68,16 @@ const applyBatch = () => {
   }
   let count = 0
   selection.value.forEach(d => {
-    if (batchLocation.value) {
-      d.location = batchLocation.value
-      count++
-    }
-    if (batchStatus.value) {
-      d.status = batchStatus.value
-      count++
+    const target = localDevices.value.find(item => item.id === d.id)
+    if (target) {
+      if (batchLocation.value) {
+        target.location = batchLocation.value
+        count++
+      }
+      if (batchStatus.value) {
+        target.status = batchStatus.value
+        count++
+      }
     }
   })
   ElMessage.success(`已批量应用 ${count} 项修改，点击确认提交保存`)
@@ -84,11 +88,14 @@ const confirm = () => {
     ElMessage.warning('请先勾选设备')
     return
   }
-  emit('update', selection.value)
+  const updatedIds = selection.value.map(d => d.id)
+  const updatedList = localDevices.value.filter(d => updatedIds.includes(d.id))
+  emit('update', updatedList)
 }
 
 watch(() => props.visible, (v) => {
   if (v) {
+    localDevices.value = JSON.parse(JSON.stringify(props.devices))
     selection.value = []
     batchLocation.value = ''
     batchStatus.value = ''

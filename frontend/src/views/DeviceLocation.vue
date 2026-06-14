@@ -14,7 +14,7 @@
         </div>
         <div class="stat-item maintenance">
           <span class="stat-dot"></span>
-          <span class="stat-label">保养</span>
+          <span class="stat-label">维修中</span>
           <span class="stat-count">{{ statusCount.MAINTENANCE }}</span>
         </div>
         <div class="stat-item retired">
@@ -27,7 +27,7 @@
       <el-select v-model="filterStatus" placeholder="状态筛选" clearable style="width: 140px">
         <el-option label="正常" value="NORMAL" />
         <el-option label="故障" value="FAULTY" />
-        <el-option label="保养" value="MAINTENANCE" />
+        <el-option label="维修中" value="MAINTENANCE" />
         <el-option label="退役" value="RETIRED" />
       </el-select>
       <el-select v-model="filterType" placeholder="类型筛选" clearable style="width: 140px">
@@ -56,7 +56,7 @@
               故障 {{ getCountByStatus(group, 'FAULTY') }}
             </el-tag>
             <el-tag v-if="getCountByStatus(group, 'MAINTENANCE') > 0" type="warning" size="small">
-              保养 {{ getCountByStatus(group, 'MAINTENANCE') }}
+              维修中 {{ getCountByStatus(group, 'MAINTENANCE') }}
             </el-tag>
             <el-tag v-if="getCountByStatus(group, 'RETIRED') > 0" type="info" size="small">
               退役 {{ getCountByStatus(group, 'RETIRED') }}
@@ -106,7 +106,7 @@ const MiniDeviceCard = {
   emits: ['detail'],
   setup(props, { emit }) {
     const typeMap = { SPEAKER: '音响', PROJECTOR: '投影仪', PLAYER: '播放器', AMPLIFIER: '功放' }
-    const statusMap = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '保养', RETIRED: '退役' }
+    const statusMap = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '维修中', RETIRED: '退役' }
 
     const typeIcon = computed(() => {
       const map = { SPEAKER: Headset, PROJECTOR: Monitor, PLAYER: VideoPlay, AMPLIFIER: Microphone }
@@ -157,7 +157,7 @@ const filterStatus = ref('')
 const filterType = ref('')
 
 const typeMap = { SPEAKER: '音响', PROJECTOR: '投影仪', PLAYER: '播放器', AMPLIFIER: '功放' }
-const statusMap = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '保养', RETIRED: '退役' }
+const statusMap = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '维修中', RETIRED: '退役' }
 
 const detailVisible = ref(false)
 const currentDevice = ref(null)
