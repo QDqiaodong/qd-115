@@ -1,7 +1,7 @@
 <template>
   <div class="usage-record">
     <div class="top-bar">
-      <el-select v-model="selectedDeviceId" placeholder="选择设备" clearable filterable style="width: 240px" @change="fetchData">
+      <el-select v-model="selectedDeviceId" placeholder="选择设备（留空查看全部）" clearable filterable style="width: 280px" @change="fetchData">
         <el-option v-for="d in deviceList" :key="d.id" :label="d.name" :value="d.id" />
       </el-select>
       <el-button type="primary" :icon="Plus" @click="openForm" :disabled="!selectedDeviceId">新增记录</el-button>
@@ -28,7 +28,12 @@
       </el-col>
     </el-row>
 
+    <UsageHeatmap ref="heatmapRef" :device-id="selectedDeviceId" style="margin-bottom: 20px;" />
+
     <el-card shadow="never">
+      <template #header>
+        <span style="font-weight: 600; color: #303133;">使用记录列表</span>
+      </template>
       <el-table :data="usageList" v-loading="loading" stripe>
         <el-table-column prop="usageDate" label="日期" width="120" />
         <el-table-column label="设备名称" width="140">
@@ -37,7 +42,11 @@
         <el-table-column label="使用时长" width="120">
           <template #default="{ row }">{{ formatDuration(row.durationMinutes) }}</template>
         </el-table-column>
-        <el-table-column prop="scenario" label="使用场景" width="100" />
+        <el-table-column prop="scenario" label="使用场景" width="100">
+          <template #default="{ row }">
+            <el-tag size="small" :type="scenarioTagType(row.scenario)">{{ row.scenario || '-' }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="remark" label="备注" show-overflow-tooltip />
         <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
@@ -89,11 +98,13 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getDevices, getUsageByDevice, createUsage, updateUsage, deleteUsage, getUsageStats } from '../api'
+import UsageHeatmap from '../components/UsageHeatmap.vue'
 
 const deviceList = ref([])
 const selectedDeviceId = ref('')
 const usageList = ref([])
 const loading = ref(false)
+const heatmapRef = ref(null)
 
 const stats = reactive({ totalDuration: '0时0分', monthDuration: '0时0分', avgDuration: '0分' })
 
@@ -108,6 +119,11 @@ const formRules = {
   deviceId: [{ required: true, message: '请选择设备', trigger: 'change' }],
   usageDate: [{ required: true, message: '请选择日期', trigger: 'change' }],
   scenario: [{ required: true, message: '请选择场景', trigger: 'change' }]
+}
+
+const scenarioTagType = (scenario) => {
+  const map = { '观影': 'primary', '音乐': 'success', '游戏': 'warning', '其他': 'info' }
+  return map[scenario] || 'info'
 }
 
 const formatDuration = (minutes) => {
@@ -210,6 +226,7 @@ const submitForm = async () => {
     }
     formVisible.value = false
     fetchData()
+    heatmapRef.value?.refresh()
   } catch (e) {
     if (e !== false) ElMessage.error('操作失败')
   }
@@ -221,6 +238,7 @@ const handleDelete = async (row) => {
     await deleteUsage(row.id)
     ElMessage.success('删除成功')
     fetchData()
+    heatmapRef.value?.refresh()
   } catch (e) { /* cancelled */ }
 }
 

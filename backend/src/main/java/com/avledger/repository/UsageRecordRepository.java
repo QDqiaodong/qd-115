@@ -22,4 +22,21 @@ public interface UsageRecordRepository extends JpaRepository<UsageRecord, Long> 
 
     @Query("SELECT COUNT(u) FROM UsageRecord u WHERE u.device.id = :deviceId")
     Long countByDeviceId(@Param("deviceId") Long deviceId);
+
+    @Query("SELECT u.usageDate, COALESCE(SUM(u.durationMinutes), 0) FROM UsageRecord u " +
+            "WHERE (:deviceId IS NULL OR u.device.id = :deviceId) " +
+            "AND u.usageDate BETWEEN :startDate AND :endDate " +
+            "GROUP BY u.usageDate")
+    List<Object[]> sumDurationByDateRange(
+            @Param("deviceId") Long deviceId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT u FROM UsageRecord u " +
+            "WHERE (:deviceId IS NULL OR u.device.id = :deviceId) " +
+            "AND u.usageDate = :date " +
+            "ORDER BY u.device.name")
+    List<UsageRecord> findByDate(
+            @Param("deviceId") Long deviceId,
+            @Param("date") LocalDate date);
 }

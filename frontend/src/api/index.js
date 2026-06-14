@@ -33,6 +33,19 @@ export const createUsage = (data) => request.post('/usage', data)
 export const updateUsage = (id, data) => request.put(`/usage/${id}`, data)
 export const deleteUsage = (id) => request.delete(`/usage/${id}`)
 export const getUsageStats = (deviceId) => request.get(`/usage/device/${deviceId}/stats`)
+export const getUsageHeatmap = (deviceId, startDate, endDate) => {
+  const params = new URLSearchParams()
+  if (deviceId) params.append('deviceId', deviceId)
+  params.append('startDate', startDate)
+  params.append('endDate', endDate)
+  return request.get(`/usage/heatmap?${params.toString()}`)
+}
+export const getUsageDailyDetails = (deviceId, date) => {
+  const params = new URLSearchParams()
+  if (deviceId) params.append('deviceId', deviceId)
+  params.append('date', date)
+  return request.get(`/usage/daily?${params.toString()}`)
+}
 
 export const getRepairByDevice = (deviceId) => request.get(`/repair/device/${deviceId}`)
 export const createRepair = (data) => request.post('/repair', data)

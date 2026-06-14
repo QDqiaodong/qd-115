@@ -4,9 +4,11 @@ import com.avledger.entity.UsageRecord;
 import com.avledger.service.UsageRecordService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +28,21 @@ public class UsageRecordController {
     @GetMapping("/device/{deviceId}/stats")
     public ResponseEntity<Map<String, Object>> getStats(@PathVariable Long deviceId) {
         return ResponseEntity.ok(usageRecordService.getUsageStatsByDevice(deviceId));
+    }
+
+    @GetMapping("/heatmap")
+    public ResponseEntity<List<Map<String, Object>>> getHeatmap(
+            @RequestParam(required = false) Long deviceId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(usageRecordService.getHeatmapData(deviceId, startDate, endDate));
+    }
+
+    @GetMapping("/daily")
+    public ResponseEntity<List<Map<String, Object>>> getDailyDetails(
+            @RequestParam(required = false) Long deviceId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(usageRecordService.getDailyDetails(deviceId, date));
     }
 
     @PostMapping

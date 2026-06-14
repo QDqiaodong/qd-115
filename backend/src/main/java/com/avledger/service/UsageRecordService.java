@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,34 @@ public class UsageRecordService {
     public Integer getTotalUsageByDevice(Long deviceId) {
         Integer total = usageRecordRepository.sumDurationByDeviceId(deviceId);
         return total != null ? total : 0;
+    }
+
+    public List<Map<String, Object>> getHeatmapData(Long deviceId, LocalDate startDate, LocalDate endDate) {
+        List<Object[]> rawData = usageRecordRepository.sumDurationByDateRange(deviceId, startDate, endDate);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Object[] row : rawData) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("date", row[0].toString());
+            item.put("minutes", row[1]);
+            result.add(item);
+        }
+        return result;
+    }
+
+    public List<Map<String, Object>> getDailyDetails(Long deviceId, LocalDate date) {
+        List<UsageRecord> records = usageRecordRepository.findByDate(deviceId, date);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (UsageRecord record : records) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", record.getId());
+            item.put("scenario", record.getScenario());
+            item.put("deviceName", record.getDevice() != null ? record.getDevice().getName() : "未知设备");
+            item.put("deviceId", record.getDevice() != null ? record.getDevice().getId() : null);
+            item.put("durationMinutes", record.getDurationMinutes());
+            item.put("remark", record.getRemark());
+            result.add(item);
+        }
+        return result;
     }
 
     @Transactional
