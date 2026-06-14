@@ -17,6 +17,10 @@
           <el-icon><Monitor /></el-icon>
           <span>设备档案</span>
         </el-menu-item>
+        <el-menu-item index="/location">
+          <el-icon><Location /></el-icon>
+          <span>位置图</span>
+        </el-menu-item>
         <el-menu-item index="/usage">
           <el-icon><Timer /></el-icon>
           <span>使用记录</span>
@@ -40,7 +44,7 @@
 </template>
 
 <script setup>
-import { Monitor, Timer, Warning, Tools } from '@element-plus/icons-vue'
+import { Monitor, Timer, Warning, Tools, Location } from '@element-plus/icons-vue'
 </script>
 
 <style scoped>
