@@ -122,18 +122,8 @@ const MiniDeviceCard = {
 
     const statusLabel = computed(() => statusMap[props.device.status] || '未知')
 
-    const statusBorderClass = computed(() => {
-      const map = {
-        NORMAL: 'border-normal',
-        FAULTY: 'border-faulty',
-        MAINTENANCE: 'border-maintenance',
-        RETIRED: 'border-retired'
-      }
-      return map[props.device.status] || ''
-    })
-
     return () => h('div', {
-      class: ['mini-device-card', statusBorderClass.value],
+      class: 'mini-device-card',
       onClick: () => emit('detail', props.device)
     }, [
       h('div', { class: 'mini-card-header' }, [
@@ -347,7 +337,6 @@ onMounted(fetchDevices)
 
 .mini-device-card {
   border: 1px solid #ebeef5;
-  border-left: 4px solid #dcdfe6;
   border-radius: 8px;
   padding: 14px;
   transition: all 0.25s ease;
@@ -359,27 +348,11 @@ onMounted(fetchDevices)
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
 }
 
-.mini-device-card.border-normal {
-  border-left-color: #67C23A;
-}
-
-.mini-device-card.border-faulty {
-  border-left-color: #F56C6C;
-}
-
-.mini-device-card.border-maintenance {
-  border-left-color: #E6A23C;
-}
-
-.mini-device-card.border-retired {
-  border-left-color: #909399;
-}
-
 .mini-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .mini-type-icon {
@@ -387,15 +360,16 @@ onMounted(fetchDevices)
 }
 
 .mini-status-badge {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .mini-card-body {
   text-align: left;
+  margin-bottom: 12px;
 }
 
 .mini-device-name {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: #303133;
   margin: 0 0 4px 0;
@@ -405,7 +379,7 @@ onMounted(fetchDevices)
 }
 
 .mini-device-model {
-  font-size: 12px;
+  font-size: 13px;
   color: #909399;
   margin: 0 0 8px 0;
   overflow: hidden;
@@ -414,6 +388,6 @@ onMounted(fetchDevices)
 }
 
 .mini-type-tag {
-  font-size: 11px;
+  margin-bottom: 10px;
 }
 </style>
