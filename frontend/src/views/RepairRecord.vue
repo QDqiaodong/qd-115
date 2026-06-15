@@ -137,7 +137,7 @@ const openForm = (row = null) => {
     form.value = {
       id: row.id,
       deviceId: row.device?.id || selectedDeviceId.value,
-      repairTime: row.repairTime,
+      repairTime: formatDateTime(row.repairTime),
       symptom: row.symptom,
       cause: row.cause,
       fixMethod: row.fixMethod,
@@ -159,6 +159,25 @@ const openForm = (row = null) => {
     }
   }
   formVisible.value = true
+}
+
+const formatDateTime = (value) => {
+  if (!value) return ''
+  if (value instanceof Date) {
+    const pad = (n) => String(n).padStart(2, '0')
+    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())} ${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`
+  }
+  if (typeof value === 'string') {
+    if (value.includes('T')) {
+      const d = new Date(value)
+      if (!isNaN(d.getTime())) {
+        const pad = (n) => String(n).padStart(2, '0')
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+      }
+    }
+    return value
+  }
+  return ''
 }
 
 const submitForm = async () => {

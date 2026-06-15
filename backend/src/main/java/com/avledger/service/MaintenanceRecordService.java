@@ -6,6 +6,7 @@ import com.avledger.enums.MaintenanceType;
 import com.avledger.repository.DeviceRepository;
 import com.avledger.repository.MaintenanceRecordRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ public class MaintenanceRecordService {
         return maintenanceRecordRepository.findByMaintenanceType(type);
     }
 
+    @CacheEvict(value = "maintenanceCycles", allEntries = true)
     @Transactional
     public MaintenanceRecord save(MaintenanceRecord maintenanceRecord, Long deviceId) {
         Device device = deviceRepository.findById(deviceId)
@@ -37,6 +39,7 @@ public class MaintenanceRecordService {
         return maintenanceRecordRepository.save(maintenanceRecord);
     }
 
+    @CacheEvict(value = "maintenanceCycles", allEntries = true)
     @Transactional
     public Optional<MaintenanceRecord> update(Long id, MaintenanceRecord maintenanceRecord) {
         return maintenanceRecordRepository.findById(id).map(existing -> {
@@ -54,6 +57,7 @@ public class MaintenanceRecordService {
         });
     }
 
+    @CacheEvict(value = "maintenanceCycles", allEntries = true)
     @Transactional
     public boolean delete(Long id) {
         if (maintenanceRecordRepository.existsById(id)) {

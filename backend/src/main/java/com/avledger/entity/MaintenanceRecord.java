@@ -1,6 +1,7 @@
 package com.avledger.entity;
 
 import com.avledger.enums.MaintenanceType;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -27,6 +28,7 @@ public class MaintenanceRecord {
     private Device device;
 
     @Column(nullable = false)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime maintenanceTime;
 
     @Enumerated(EnumType.STRING)
@@ -44,5 +46,6 @@ public class MaintenanceRecord {
 
     @CreationTimestamp
     @Column(updatable = false)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 }
