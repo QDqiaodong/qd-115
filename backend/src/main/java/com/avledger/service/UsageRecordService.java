@@ -2,6 +2,7 @@ package com.avledger.service;
 
 import com.avledger.entity.Device;
 import com.avledger.entity.UsageRecord;
+import com.avledger.enums.DeviceStatus;
 import com.avledger.repository.DeviceRepository;
 import com.avledger.repository.UsageRecordRepository;
 import lombok.RequiredArgsConstructor;
@@ -79,6 +80,9 @@ public class UsageRecordService {
     public UsageRecord save(UsageRecord usageRecord, Long deviceId) {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new IllegalArgumentException("Device not found with id: " + deviceId));
+        if (device.getStatus() == DeviceStatus.RETIRED) {
+            throw new IllegalStateException("退役设备不允许新增使用记录");
+        }
         usageRecord.setDevice(device);
         return usageRecordRepository.save(usageRecord);
     }

@@ -17,6 +17,10 @@
           <el-icon><Monitor /></el-icon>
           <span>设备档案</span>
         </el-menu-item>
+        <el-menu-item index="/status-wall">
+          <el-icon><DataBoard /></el-icon>
+          <span>状态墙</span>
+        </el-menu-item>
         <el-menu-item index="/location">
           <el-icon><Location /></el-icon>
           <span>位置图</span>
@@ -44,7 +48,7 @@
 </template>
 
 <script setup>
-import { Monitor, Timer, Warning, Tools, Location } from '@element-plus/icons-vue'
+import { Monitor, Timer, Warning, Tools, Location, DataBoard } from '@element-plus/icons-vue'
 </script>
 
 <style scoped>

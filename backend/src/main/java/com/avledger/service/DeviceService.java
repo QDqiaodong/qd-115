@@ -10,14 +10,41 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class DeviceService {
 
     private final DeviceRepository deviceRepository;
+
+    private static final Map<DeviceStatus, List<DeviceStatus>> TRANSITION_RULES = Map.of(
+            DeviceStatus.NORMAL, Arrays.asList(DeviceStatus.FAULTY, DeviceStatus.MAINTENANCE, DeviceStatus.RETIRED),
+            DeviceStatus.FAULTY, Arrays.asList(DeviceStatus.NORMAL, DeviceStatus.MAINTENANCE, DeviceStatus.RETIRED),
+            DeviceStatus.MAINTENANCE, Arrays.asList(DeviceStatus.NORMAL, DeviceStatus.FAULTY, DeviceStatus.RETIRED),
+            DeviceStatus.RETIRED, List.of()
+    );
+
+    public List<DeviceStatus> getAllowedTransitions(DeviceStatus current) {
+        return TRANSITION_RULES.getOrDefault(current, List.of());
+    }
+
+    public boolean isTransitionAllowed(DeviceStatus from, DeviceStatus to) {
+        if (from == to) return true;
+        return TRANSITION_RULES.getOrDefault(from, List.of()).contains(to);
+    }
+
+    private void validateTransition(DeviceStatus from, DeviceStatus to) {
+        if (!isTransitionAllowed(from, to)) {
+            throw new IllegalStateException(
+                    "设备状态不允许从 " + from.name() + " 转换为 " + to.name() +
+                    "，退役设备不可恢复为使用或保养状态");
+        }
+    }
 
     @Cacheable(value = "devices", key = "'all'")
     public List<Device> findAll() {
@@ -47,6 +74,9 @@ public class DeviceService {
     @Transactional
     public Optional<Device> update(Long id, Device device) {
         return deviceRepository.findById(id).map(existing -> {
+            if (device.getStatus() != null && device.getStatus() != existing.getStatus()) {
+                validateTransition(existing.getStatus(), device.getStatus());
+            }
             existing.setName(device.getName());
             existing.setModel(device.getModel());
             existing.setDeviceType(device.getDeviceType());
@@ -71,6 +101,14 @@ public class DeviceService {
     @CacheEvict(value = {"devices", "deviceCategories"}, allEntries = true)
     @Transactional
     public List<Device> batchUpdate(List<Device> devices) {
+        for (Device device : devices) {
+            if (device.getId() != null && device.getStatus() != null) {
+                Device existing = deviceRepository.findById(device.getId()).orElse(null);
+                if (existing != null && device.getStatus() != existing.getStatus()) {
+                    validateTransition(existing.getStatus(), device.getStatus());
+                }
+            }
+        }
         return deviceRepository.saveAll(devices);
     }
 }

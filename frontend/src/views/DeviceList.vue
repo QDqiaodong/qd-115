@@ -56,11 +56,14 @@
         </el-form-item>
         <el-form-item label="设备状态" prop="status">
           <el-select v-model="form.status" placeholder="请选择状态" style="width: 100%">
-            <el-option label="正常" value="NORMAL" />
-            <el-option label="故障" value="FAULTY" />
-            <el-option label="维修中" value="MAINTENANCE" />
-            <el-option label="退役" value="RETIRED" />
+            <el-option label="正常" value="NORMAL" :disabled="statusDisabled('NORMAL')" />
+            <el-option label="故障" value="FAULTY" :disabled="statusDisabled('FAULTY')" />
+            <el-option label="维修中" value="MAINTENANCE" :disabled="statusDisabled('MAINTENANCE')" />
+            <el-option label="退役" value="RETIRED" :disabled="statusDisabled('RETIRED')" />
           </el-select>
+          <div v-if="formMode === 'edit' && form.originalStatus === 'RETIRED'" class="status-hint">
+            退役设备不可恢复为正常或保养状态
+          </div>
         </el-form-item>
         <el-form-item label="购入日期" prop="purchaseDate">
           <el-date-picker v-model="form.purchaseDate" type="date" value-format="YYYY-MM-DD" placeholder="选择购入日期" style="width: 100%" />
@@ -240,6 +243,28 @@ const overviewStats = ref({
 
 const batchEditVisible = ref(false)
 
+const TRANSITION_RULES = {
+  NORMAL: ['FAULTY', 'MAINTENANCE', 'RETIRED'],
+  FAULTY: ['NORMAL', 'MAINTENANCE', 'RETIRED'],
+  MAINTENANCE: ['NORMAL', 'FAULTY', 'RETIRED'],
+  RETIRED: []
+}
+
+const allowedStatuses = computed(() => {
+  if (formMode.value === 'create') {
+    return ['NORMAL', 'FAULTY', 'MAINTENANCE', 'RETIRED']
+  }
+  const current = form.value.originalStatus
+  if (!current) return ['NORMAL', 'FAULTY', 'MAINTENANCE', 'RETIRED']
+  const allowed = TRANSITION_RULES[current] || []
+  return [current, ...allowed]
+})
+
+const statusDisabled = (status) => {
+  if (formMode.value === 'create') return false
+  return !allowedStatuses.value.includes(status)
+}
+
 const filteredDevices = computed(() => {
   return devices.value.filter(d => {
     const matchSearch = !searchText.value ||
@@ -353,10 +378,10 @@ const fetchDevices = async () => {
 const openForm = (device = null) => {
   if (device && device.id) {
     formMode.value = 'edit'
-    form.value = { ...device }
+    form.value = { ...device, originalStatus: device.status }
   } else {
     formMode.value = 'create'
-    form.value = { name: '', model: '', deviceType: '', status: 'NORMAL', purchaseDate: '', location: '', hardwareSpecs: '' }
+    form.value = { name: '', model: '', deviceType: '', status: 'NORMAL', purchaseDate: '', location: '', hardwareSpecs: '', originalStatus: '' }
   }
   formVisible.value = true
 }
@@ -509,5 +534,11 @@ onMounted(fetchDevices)
 :deep(.el-timeline-item__timestamp) {
   font-size: 12px;
   color: #909399;
+}
+.status-hint {
+  font-size: 12px;
+  color: #F56C6C;
+  margin-top: 4px;
+  line-height: 1.4;
 }
 </style>

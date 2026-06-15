@@ -2,6 +2,7 @@ package com.avledger.service;
 
 import com.avledger.entity.Device;
 import com.avledger.entity.MaintenanceRecord;
+import com.avledger.enums.DeviceStatus;
 import com.avledger.enums.MaintenanceType;
 import com.avledger.repository.DeviceRepository;
 import com.avledger.repository.MaintenanceRecordRepository;
@@ -35,6 +36,9 @@ public class MaintenanceRecordService {
     public MaintenanceRecord save(MaintenanceRecord maintenanceRecord, Long deviceId) {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new IllegalArgumentException("Device not found with id: " + deviceId));
+        if (device.getStatus() == DeviceStatus.RETIRED) {
+            throw new IllegalStateException("退役设备不允许新增保养记录");
+        }
         maintenanceRecord.setDevice(device);
         return maintenanceRecordRepository.save(maintenanceRecord);
     }

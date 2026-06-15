@@ -13,6 +13,9 @@
       </el-select>
       <el-button type="primary" :disabled="!hasSelection" @click="applyBatch">批量应用</el-button>
     </div>
+    <el-alert v-if="retiredInSelection" type="warning" :closable="false" style="margin-bottom: 12px">
+      选中的设备中包含退役设备，退役设备的状态不会被变更
+    </el-alert>
     <el-table ref="tableRef" :data="localDevices" @selection-change="onSelectionChange" height="400">
       <el-table-column type="selection" width="50" />
       <el-table-column prop="name" label="设备名称" width="140" />
@@ -55,7 +58,18 @@ const typeMap = { SPEAKER: '音响', PROJECTOR: '投影仪', PLAYER: '播放器'
 const typeMapStatus = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '维修中', RETIRED: '退役' }
 const statusTypeMap = { NORMAL: 'success', FAULTY: 'danger', MAINTENANCE: 'warning', RETIRED: 'info' }
 
+const TRANSITION_RULES = {
+  NORMAL: ['FAULTY', 'MAINTENANCE', 'RETIRED'],
+  FAULTY: ['NORMAL', 'MAINTENANCE', 'RETIRED'],
+  MAINTENANCE: ['NORMAL', 'FAULTY', 'RETIRED'],
+  RETIRED: []
+}
+
 const hasSelection = computed(() => selection.value.length > 0)
+
+const retiredInSelection = computed(() => {
+  return selection.value.some(d => d.status === 'RETIRED')
+})
 
 const onSelectionChange = (rows) => {
   selection.value = rows
@@ -67,6 +81,7 @@ const applyBatch = () => {
     return
   }
   let count = 0
+  let skippedRetired = 0
   selection.value.forEach(d => {
     const target = localDevices.value.find(item => item.id === d.id)
     if (target) {
@@ -75,12 +90,25 @@ const applyBatch = () => {
         count++
       }
       if (batchStatus.value) {
-        target.status = batchStatus.value
-        count++
+        if (target.status === 'RETIRED') {
+          skippedRetired++
+        } else {
+          const allowed = TRANSITION_RULES[target.status] || []
+          if (allowed.includes(batchStatus.value)) {
+            target.status = batchStatus.value
+            count++
+          } else {
+            skippedRetired++
+          }
+        }
       }
     }
   })
-  ElMessage.success(`已批量应用 ${count} 项修改，点击确认提交保存`)
+  let msg = `已批量应用 ${count} 项修改，点击确认提交保存`
+  if (skippedRetired > 0) {
+    msg += `（${skippedRetired} 台退役设备状态不可变更，已跳过）`
+  }
+  ElMessage.success(msg)
 }
 
 const confirm = () => {
