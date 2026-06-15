@@ -11,7 +11,7 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM ${DOCKER_REGISTRY}nginx:alpine
+FROM ${DOCKER_REGISTRY}nginx:1.27-alpine
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
