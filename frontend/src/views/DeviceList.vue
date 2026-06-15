@@ -92,6 +92,55 @@
           <el-descriptions-item label="硬件规格">{{ currentDevice.hardwareSpecs || '-' }}</el-descriptions-item>
         </el-descriptions>
         <el-tabs v-model="detailTab" style="margin-top: 20px">
+          <el-tab-pane label="运维总览" name="overview">
+            <el-row :gutter="12" class="overview-stats">
+              <el-col :span="8">
+                <div class="overview-card">
+                  <div class="overview-card-label">累计使用时长</div>
+                  <div class="overview-card-value overview-blue">{{ overviewStats.totalDuration }}</div>
+                  <div class="overview-card-sub">共 {{ overviewStats.usageCount }} 次使用</div>
+                </div>
+              </el-col>
+              <el-col :span="8">
+                <div class="overview-card">
+                  <div class="overview-card-label">最近维修</div>
+                  <div class="overview-card-value overview-red">{{ overviewStats.lastRepairTime }}</div>
+                  <div class="overview-card-sub">累计 {{ overviewStats.repairCount }} 次检修</div>
+                </div>
+              </el-col>
+              <el-col :span="8">
+                <div class="overview-card">
+                  <div class="overview-card-label">最近保养</div>
+                  <div class="overview-card-value overview-green">{{ overviewStats.lastMaintenanceTime }}</div>
+                  <div class="overview-card-sub">累计 {{ overviewStats.maintenanceCount }} 次养护</div>
+                </div>
+              </el-col>
+            </el-row>
+
+            <div class="timeline-section">
+              <div class="section-title">运维时间线</div>
+              <el-timeline v-if="getOverviewTimeline().length > 0">
+                <el-timeline-item
+                  v-for="(event, idx) in getOverviewTimeline()"
+                  :key="idx"
+                  :timestamp="event.time"
+                  :color="timelineTypeColor(event.type)"
+                  placement="top"
+                >
+                  <el-card shadow="never" class="timeline-card">
+                    <div class="timeline-header">
+                      <el-tag :type="event.type === 'usage' ? 'primary' : event.type === 'repair' ? 'danger' : event.type === 'maintenance' ? 'success' : 'warning'" size="small">
+                        {{ timelineTypeLabel(event.type) }}
+                      </el-tag>
+                      <span class="timeline-title">{{ event.title }}</span>
+                    </div>
+                    <div class="timeline-content">{{ event.content }}</div>
+                  </el-card>
+                </el-timeline-item>
+              </el-timeline>
+              <el-empty v-else description="暂无运维记录" :image-size="60" />
+            </div>
+          </el-tab-pane>
           <el-tab-pane label="使用记录" name="usage">
             <el-table :data="detailUsageList" size="small" v-loading="detailLoading">
               <el-table-column prop="usageDate" label="日期" width="110" />
@@ -146,7 +195,7 @@ import DeviceCard from '../components/DeviceCard.vue'
 import BatchEdit from '../components/BatchEdit.vue'
 import {
   getDevices, createDevice, updateDevice, deleteDevice, batchUpdateDevices,
-  getUsageByDevice, getRepairByDevice, getMaintenanceByDevice
+  getUsageByDevice, getRepairByDevice, getMaintenanceByDevice, getUsageStats
 } from '../api'
 
 const devices = ref([])
@@ -175,11 +224,19 @@ const formRules = {
 
 const detailVisible = ref(false)
 const currentDevice = ref(null)
-const detailTab = ref('usage')
+const detailTab = ref('overview')
 const detailUsageList = ref([])
 const detailRepairList = ref([])
 const detailMaintenanceList = ref([])
 const detailLoading = ref(false)
+const overviewStats = ref({
+  totalDuration: '0时0分',
+  lastRepairTime: '-',
+  lastMaintenanceTime: '-',
+  repairCount: 0,
+  maintenanceCount: 0,
+  usageCount: 0
+})
 
 const batchEditVisible = ref(false)
 
@@ -197,6 +254,91 @@ const filteredDevices = computed(() => {
 const statusTagType = (status) => {
   const map = { NORMAL: 'success', FAULTY: 'danger', MAINTENANCE: 'warning', RETIRED: 'info' }
   return map[status] || 'info'
+}
+
+const formatDuration = (minutes) => {
+  if (!minutes && minutes !== 0) return '0时0分'
+  const h = Math.floor(minutes / 60)
+  const m = Math.round(minutes % 60)
+  return h > 0 ? `${h}时${m}分` : `${m}分`
+}
+
+const formatDateTimeShort = (value) => {
+  if (!value) return '-'
+  const str = String(value)
+  if (str.includes('T')) {
+    const d = new Date(str)
+    if (!isNaN(d.getTime())) {
+      const pad = (n) => String(n).padStart(2, '0')
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+    }
+  }
+  return str.length > 16 ? str.slice(0, 16) : str
+}
+
+const calcOverviewStats = (usage, repair, maintenance, usageStats) => {
+  const totalMin = usageStats?.totalMinutes || usage.reduce((sum, r) => sum + (r.durationMinutes || 0), 0)
+  const sortedRepair = [...repair].sort((a, b) => new Date(b.repairTime) - new Date(a.repairTime))
+  const sortedMaintenance = [...maintenance].sort((a, b) => new Date(b.maintenanceTime) - new Date(a.maintenanceTime))
+  overviewStats.value = {
+    totalDuration: formatDuration(totalMin),
+    lastRepairTime: sortedRepair.length > 0 ? formatDateTimeShort(sortedRepair[0].repairTime) : '暂无记录',
+    lastMaintenanceTime: sortedMaintenance.length > 0 ? formatDateTimeShort(sortedMaintenance[0].maintenanceTime) : '暂无记录',
+    repairCount: repair.length,
+    maintenanceCount: maintenance.length,
+    usageCount: usage.length
+  }
+}
+
+const getOverviewTimeline = () => {
+  const events = []
+  detailUsageList.value.forEach(r => {
+    events.push({
+      type: 'usage',
+      time: r.usageDate,
+      timestamp: new Date(r.usageDate).getTime(),
+      title: `使用记录 - ${Math.floor(r.durationMinutes / 60)}时${r.durationMinutes % 60}分`,
+      content: `场景：${r.scenario || '-'}${r.remark ? ' | 备注：' + r.remark : ''}`
+    })
+  })
+  detailRepairList.value.forEach(r => {
+    events.push({
+      type: 'repair',
+      time: formatDateTimeShort(r.repairTime),
+      timestamp: new Date(r.repairTime).getTime(),
+      title: `检修记录${r.cost ? ' - ¥' + Number(r.cost).toFixed(2) : ''}`,
+      content: `异常：${r.symptom || '-'}${r.fixMethod ? ' | 修复：' + r.fixMethod : ''}`
+    })
+  })
+  detailMaintenanceList.value.forEach(r => {
+    events.push({
+      type: 'maintenance',
+      time: formatDateTimeShort(r.maintenanceTime),
+      timestamp: new Date(r.maintenanceTime).getTime(),
+      title: `养护记录 - ${mtMap[r.maintenanceType] || r.maintenanceType}`,
+      content: `内容：${r.content || '-'}${r.operator ? ' | 操作人：' + r.operator : ''}`
+    })
+  })
+  if (currentDevice.value?.createdAt) {
+    events.push({
+      type: 'status',
+      time: formatDateTimeShort(currentDevice.value.createdAt),
+      timestamp: new Date(currentDevice.value.createdAt).getTime(),
+      title: '设备入库',
+      content: `初始状态：${statusMap[currentDevice.value.status] || currentDevice.value.status}`
+    })
+  }
+  return events.sort((a, b) => b.timestamp - a.timestamp)
+}
+
+const timelineTypeColor = (type) => {
+  const map = { usage: '#409EFF', repair: '#F56C6C', maintenance: '#67C23A', status: '#E6A23C' }
+  return map[type] || '#909399'
+}
+
+const timelineTypeLabel = (type) => {
+  const map = { usage: '使用', repair: '检修', maintenance: '养护', status: '状态' }
+  return map[type] || type
 }
 
 const fetchDevices = async () => {
@@ -248,17 +390,19 @@ const handleDelete = async (device) => {
 const openDetail = async (device) => {
   currentDevice.value = device
   detailVisible.value = true
-  detailTab.value = 'usage'
+  detailTab.value = 'overview'
   detailLoading.value = true
   try {
-    const [usage, repair, maintenance] = await Promise.all([
+    const [usage, repair, maintenance, usageStats] = await Promise.all([
       getUsageByDevice(device.id).catch(() => []),
       getRepairByDevice(device.id).catch(() => []),
-      getMaintenanceByDevice(device.id).catch(() => [])
+      getMaintenanceByDevice(device.id).catch(() => []),
+      getUsageStats(device.id).catch(() => null)
     ])
     detailUsageList.value = Array.isArray(usage) ? usage : []
     detailRepairList.value = Array.isArray(repair) ? repair : []
     detailMaintenanceList.value = Array.isArray(maintenance) ? maintenance : []
+    calcOverviewStats(detailUsageList.value, detailRepairList.value, detailMaintenanceList.value, usageStats)
   } catch (e) {
     ElMessage.error('获取详情数据失败')
   } finally {
@@ -292,4 +436,78 @@ onMounted(fetchDevices)
   border-radius: 8px;
 }
 .el-col { margin-bottom: 16px; }
+
+.overview-stats { margin-bottom: 20px; }
+.overview-card {
+  background: linear-gradient(135deg, #f8faff 0%, #ffffff 100%);
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  transition: all 0.3s;
+}
+.overview-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+.overview-card-label {
+  font-size: 13px;
+  color: #909399;
+  margin-bottom: 8px;
+}
+.overview-card-value {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  line-height: 1.3;
+  word-break: break-all;
+}
+.overview-blue { color: #409EFF; }
+.overview-red { color: #F56C6C; }
+.overview-green { color: #67C23A; }
+.overview-card-sub {
+  font-size: 12px;
+  color: #c0c4cc;
+}
+
+.timeline-section {
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 16px;
+}
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 16px;
+  padding-left: 8px;
+  border-left: 3px solid #409EFF;
+}
+.timeline-card {
+  padding: 12px 16px;
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  margin-bottom: 4px;
+}
+.timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.timeline-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #303133;
+}
+.timeline-content {
+  font-size: 12px;
+  color: #606266;
+  line-height: 1.5;
+}
+:deep(.el-timeline-item__timestamp) {
+  font-size: 12px;
+  color: #909399;
+}
 </style>
