@@ -49,6 +49,13 @@ export const getUsageDailyDetails = (deviceId, date) => {
   params.append('date', date)
   return request.get(`/usage/daily?${params.toString()}`)
 }
+export const getUsageSceneDistribution = (deviceType, location) => {
+  const params = new URLSearchParams()
+  if (deviceType) params.append('deviceType', deviceType)
+  if (location) params.append('location', location)
+  return request.get(`/usage/scene-distribution?${params.toString()}`)
+}
+export const getUsageLocations = () => request.get('/usage/locations')
 
 export const getRepairByDevice = (deviceId) => request.get(`/repair/device/${deviceId}`)
 export const createRepair = (data) => request.post('/repair', data)

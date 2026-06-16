@@ -1,6 +1,7 @@
 package com.avledger.controller;
 
 import com.avledger.entity.UsageRecord;
+import com.avledger.enums.DeviceType;
 import com.avledger.service.UsageRecordService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,24 @@ public class UsageRecordController {
             @RequestParam(required = false) Long deviceId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(usageRecordService.getDailyDetails(deviceId, date));
+    }
+
+    @GetMapping("/scene-distribution")
+    public ResponseEntity<Map<String, Object>> getSceneDistribution(
+            @RequestParam(required = false) String deviceType,
+            @RequestParam(required = false) String location) {
+        DeviceType type = null;
+        if (deviceType != null && !deviceType.isBlank()) {
+            type = DeviceType.valueOf(deviceType);
+        }
+        String loc = (location != null && !location.isBlank()) ? location : null;
+        List<Map<String, Object>> result = usageRecordService.getSceneDistribution(type, loc);
+        return ResponseEntity.ok(result.isEmpty() ? Map.of("totalMinutes", 0, "items", List.of()) : result.get(0));
+    }
+
+    @GetMapping("/locations")
+    public ResponseEntity<List<String>> getLocations() {
+        return ResponseEntity.ok(usageRecordService.getDistinctLocations());
     }
 
     @PostMapping

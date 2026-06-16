@@ -3,6 +3,7 @@ package com.avledger.service;
 import com.avledger.entity.Device;
 import com.avledger.entity.UsageRecord;
 import com.avledger.enums.DeviceStatus;
+import com.avledger.enums.DeviceType;
 import com.avledger.repository.DeviceRepository;
 import com.avledger.repository.UsageRecordRepository;
 import lombok.RequiredArgsConstructor;
@@ -110,5 +111,35 @@ public class UsageRecordService {
             return true;
         }
         return false;
+    }
+
+    public List<Map<String, Object>> getSceneDistribution(DeviceType deviceType, String location) {
+        List<Object[]> rawData = usageRecordRepository.sumDurationByScene(deviceType, location);
+        int totalMinutes = 0;
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (Object[] row : rawData) {
+            String scenario = row[0] != null ? row[0].toString() : "未分类";
+            int minutes = ((Number) row[1]).intValue();
+            totalMinutes += minutes;
+            Map<String, Object> item = new HashMap<>();
+            item.put("scenario", scenario);
+            item.put("durationMinutes", minutes);
+            items.add(item);
+        }
+        for (Map<String, Object> item : items) {
+            int minutes = (int) item.get("durationMinutes");
+            double percent = totalMinutes > 0 ? Math.round(minutes * 1000.0 / totalMinutes) / 10.0 : 0.0;
+            item.put("percent", percent);
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalMinutes", totalMinutes);
+        result.put("items", items);
+        List<Map<String, Object>> wrapper = new ArrayList<>();
+        wrapper.add(result);
+        return wrapper;
+    }
+
+    public List<String> getDistinctLocations() {
+        return deviceRepository.findDistinctLocations();
     }
 }

@@ -39,4 +39,13 @@ public interface UsageRecordRepository extends JpaRepository<UsageRecord, Long> 
     List<UsageRecord> findByDate(
             @Param("deviceId") Long deviceId,
             @Param("date") LocalDate date);
+
+    @Query("SELECT u.scenario, COALESCE(SUM(u.durationMinutes), 0) FROM UsageRecord u " +
+            "WHERE (:deviceType IS NULL OR u.device.deviceType = :deviceType) " +
+            "AND (:location IS NULL OR u.device.location = :location) " +
+            "GROUP BY u.scenario " +
+            "ORDER BY SUM(u.durationMinutes) DESC")
+    List<Object[]> sumDurationByScene(
+            @Param("deviceType") com.avledger.enums.DeviceType deviceType,
+            @Param("location") String location);
 }

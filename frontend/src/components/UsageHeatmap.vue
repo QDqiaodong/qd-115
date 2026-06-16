@@ -193,6 +193,7 @@ function scenarioTagType(scenario) {
     '观影': 'primary',
     '音乐': 'success',
     '游戏': 'warning',
+    '调试': 'danger',
     '其他': 'info'
   }
   return map[scenario] || 'info'
