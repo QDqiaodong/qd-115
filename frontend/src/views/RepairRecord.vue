@@ -10,17 +10,21 @@
     </div>
 
     <el-card shadow="never">
-      <el-table :data="repairList" v-loading="loading" stripe>
-        <el-table-column prop="repairTime" label="检修时间" width="180" />
-        <el-table-column label="设备名称" width="140">
+      <el-table :data="repairList" v-loading="loading" stripe border>
+        <el-table-column prop="repairTime" label="检修时间" width="180" fixed="left" />
+        <el-table-column label="设备名称" width="140" fixed="left">
           <template #default="{ row }">{{ row.device?.name }}</template>
         </el-table-column>
         <el-table-column prop="symptom" label="异常现象" show-overflow-tooltip min-width="180" />
-        <el-table-column prop="cause" label="故障原因" show-overflow-tooltip min-width="150" />
-        <el-table-column prop="fixMethod" label="修复方式" show-overflow-tooltip min-width="150" />
-        <el-table-column prop="repairPerson" label="检修人" width="100" />
-        <el-table-column label="费用" width="100" align="right">
-          <template #default="{ row }">¥{{ row.cost != null ? Number(row.cost).toFixed(2) : '0.00' }}</template>
+        <el-table-column label="维修详情" align="center">
+          <el-table-column prop="cause" label="故障原因" show-overflow-tooltip min-width="150" />
+          <el-table-column prop="fixMethod" label="修复方式" show-overflow-tooltip min-width="150" />
+          <el-table-column prop="repairPerson" label="维修人员" width="100" />
+          <el-table-column label="费用" width="120" align="right">
+            <template #default="{ row }">
+              <span class="cost-amount">¥{{ row.cost != null ? Number(row.cost).toFixed(2) : '0.00' }}</span>
+            </template>
+          </el-table-column>
         </el-table-column>
         <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
@@ -226,5 +230,13 @@ onMounted(async () => {
 .top-bar {
   display: flex; align-items: center; gap: 12px;
   margin-bottom: 20px; background: #fff; padding: 16px; border-radius: 8px;
+}
+.cost-amount {
+  font-weight: 600;
+  color: #f56c6c;
+}
+:deep(.el-table .el-table__group-title) {
+  font-weight: 600;
+  background: #f5f7fa !important;
 }
 </style>

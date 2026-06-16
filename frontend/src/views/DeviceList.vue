@@ -158,11 +158,45 @@
             <el-empty v-if="detailUsageList.length === 0 && !detailLoading" description="暂无使用记录" :image-size="60" />
           </el-tab-pane>
           <el-tab-pane label="检修记录" name="repair">
-            <el-table :data="detailRepairList" size="small" v-loading="detailLoading">
+            <div v-if="detailRepairList.length > 0" class="cost-trend-section">
+              <div class="section-title">
+                <el-icon><TrendCharts /></el-icon>
+                历次维修费用趋势
+              </div>
+              <div ref="costChartRef" class="cost-chart"></div>
+              <div class="cost-summary">
+                <el-row :gutter="12">
+                  <el-col :span="8">
+                    <div class="summary-card">
+                      <div class="summary-label">累计维修费用</div>
+                      <div class="summary-value">¥{{ totalRepairCost.toFixed(2) }}</div>
+                    </div>
+                  </el-col>
+                  <el-col :span="8">
+                    <div class="summary-card">
+                      <div class="summary-label">平均每次费用</div>
+                      <div class="summary-value">¥{{ avgRepairCost.toFixed(2) }}</div>
+                    </div>
+                  </el-col>
+                  <el-col :span="8">
+                    <div class="summary-card">
+                      <div class="summary-label">最高单次费用</div>
+                      <div class="summary-value">¥{{ maxRepairCost.toFixed(2) }}</div>
+                    </div>
+                  </el-col>
+                </el-row>
+              </div>
+            </div>
+            <el-table :data="sortedRepairList" size="small" v-loading="detailLoading" style="margin-top: 16px">
               <el-table-column prop="repairTime" label="时间" width="160" />
               <el-table-column prop="symptom" label="异常现象" show-overflow-tooltip />
-              <el-table-column label="费用" width="90">
-                <template #default="{ row }">¥{{ row.cost || 0 }}</template>
+              <el-table-column prop="cause" label="故障原因" show-overflow-tooltip min-width="120" />
+              <el-table-column prop="fixMethod" label="修复方式" show-overflow-tooltip min-width="120" />
+              <el-table-column prop="repairPerson" label="维修人员" width="100" />
+              <el-table-column label="费用" width="110" align="right">
+                <template #default="{ row }">
+                  <span class="repair-cost">¥{{ Number(row.cost || 0).toFixed(2) }}</span>
+                </template>
               </el-table-column>
             </el-table>
             <el-empty v-if="detailRepairList.length === 0 && !detailLoading" description="暂无检修记录" :image-size="60" />
@@ -191,9 +225,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus, Edit } from '@element-plus/icons-vue'
+import { Search, Plus, Edit, TrendCharts } from '@element-plus/icons-vue'
+import * as echarts from 'echarts'
 import DeviceCard from '../components/DeviceCard.vue'
 import BatchEdit from '../components/BatchEdit.vue'
 import {
@@ -240,6 +275,27 @@ const overviewStats = ref({
   repairCount: 0,
   maintenanceCount: 0,
   usageCount: 0
+})
+
+const costChartRef = ref(null)
+let costChartInstance = null
+
+const sortedRepairList = computed(() => {
+  return [...detailRepairList.value].sort((a, b) => new Date(a.repairTime) - new Date(b.repairTime))
+})
+
+const totalRepairCost = computed(() => {
+  return detailRepairList.value.reduce((sum, r) => sum + Number(r.cost || 0), 0)
+})
+
+const avgRepairCost = computed(() => {
+  if (detailRepairList.value.length === 0) return 0
+  return totalRepairCost.value / detailRepairList.value.length
+})
+
+const maxRepairCost = computed(() => {
+  if (detailRepairList.value.length === 0) return 0
+  return Math.max(...detailRepairList.value.map(r => Number(r.cost || 0)))
 })
 
 const batchEditVisible = ref(false)
@@ -416,7 +472,167 @@ const handleDelete = async (device) => {
   } catch (e) { /* cancelled */ }
 }
 
+const initCostChart = () => {
+  if (!costChartRef.value || sortedRepairList.value.length === 0) return
+
+  nextTick(() => {
+    if (!costChartRef.value) return
+
+    if (costChartInstance) {
+      costChartInstance.dispose()
+    }
+
+    costChartInstance = echarts.init(costChartRef.value)
+
+    const dates = sortedRepairList.value.map(r => {
+      const d = new Date(r.repairTime)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    })
+    const costs = sortedRepairList.value.map(r => Number(r.cost || 0))
+    const cumulative = []
+    let sum = 0
+    costs.forEach(c => {
+      sum += c
+      cumulative.push(parseFloat(sum.toFixed(2)))
+    })
+
+    const option = {
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'cross' },
+        formatter: (params) => {
+          let result = `<div style="font-weight: 600; margin-bottom: 8px;">${params[0].axisValue}</div>`
+          params.forEach(p => {
+            const marker = `<span style="display:inline-block;margin-right:4px;border-radius:50%;width:10px;height:10px;background-color:${p.color};"></span>`
+            result += `<div style="margin: 4px 0;">${marker}${p.seriesName}: <span style="font-weight: 600;">¥${Number(p.value).toFixed(2)}</span></div>`
+          })
+          const idx = params[0].dataIndex
+          const repair = sortedRepairList.value[idx]
+          if (repair) {
+            result += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 12px; color: #666;">`
+            if (repair.symptom) result += `<div>异常: ${repair.symptom}</div>`
+            if (repair.cause) result += `<div>原因: ${repair.cause}</div>`
+            if (repair.repairPerson) result += `<div>维修人员: ${repair.repairPerson}</div>`
+            result += `</div>`
+          }
+          return result
+        }
+      },
+      legend: {
+        data: ['单次费用', '累计费用'],
+        bottom: 0
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '15%',
+        top: '10%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        data: dates,
+        axisLabel: {
+          rotate: 45,
+          fontSize: 11
+        },
+        axisLine: { lineStyle: { color: '#dcdfe6' } }
+      },
+      yAxis: [
+        {
+          type: 'value',
+          name: '单次费用(元)',
+          position: 'left',
+          axisLabel: { formatter: '¥{value}' },
+          splitLine: { lineStyle: { type: 'dashed', color: '#ebeef5' } }
+        },
+        {
+          type: 'value',
+          name: '累计费用(元)',
+          position: 'right',
+          axisLabel: { formatter: '¥{value}' },
+          splitLine: { show: false }
+        }
+      ],
+      series: [
+        {
+          name: '单次费用',
+          type: 'bar',
+          data: costs,
+          itemStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: '#f56c6c' },
+              { offset: 1, color: '#fcb6b6' }
+            ]),
+            borderRadius: [4, 4, 0, 0]
+          },
+          barWidth: '40%',
+          label: {
+            show: true,
+            position: 'top',
+            formatter: '¥{c}',
+            fontSize: 11,
+            color: '#f56c6c'
+          }
+        },
+        {
+          name: '累计费用',
+          type: 'line',
+          yAxisIndex: 1,
+          data: cumulative,
+          smooth: true,
+          symbol: 'circle',
+          symbolSize: 8,
+          itemStyle: { color: '#409EFF' },
+          lineStyle: { width: 3, color: '#409EFF' },
+          areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
+              { offset: 1, color: 'rgba(64, 158, 255, 0.05)' }
+            ])
+          }
+        }
+      ]
+    }
+
+    costChartInstance.setOption(option)
+
+    const handleResize = () => {
+      costChartInstance?.resize()
+    }
+    window.addEventListener('resize', handleResize)
+    costChartInstance.__resizeHandler = handleResize
+  })
+}
+
+const destroyCostChart = () => {
+  if (costChartInstance) {
+    if (costChartInstance.__resizeHandler) {
+      window.removeEventListener('resize', costChartInstance.__resizeHandler)
+    }
+    costChartInstance.dispose()
+    costChartInstance = null
+  }
+}
+
+watch(detailTab, (newTab) => {
+  if (newTab === 'repair' && detailVisible.value) {
+    nextTick(() => initCostChart())
+  }
+})
+
+watch(detailVisible, (visible) => {
+  if (!visible) {
+    destroyCostChart()
+  }
+})
+
+onBeforeUnmount(() => {
+  destroyCostChart()
+})
+
 const openDetail = async (device) => {
+  destroyCostChart()
   currentDevice.value = device
   detailVisible.value = true
   detailTab.value = 'overview'
@@ -544,5 +760,60 @@ onMounted(fetchDevices)
   color: #F56C6C;
   margin-top: 4px;
   line-height: 1.4;
+}
+
+.cost-trend-section {
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.cost-trend-section .section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #409EFF;
+}
+
+.cost-chart {
+  width: 100%;
+  height: 320px;
+}
+
+.cost-summary {
+  margin-top: 16px;
+}
+
+.summary-card {
+  background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
+  border: 1px solid #fde2e2;
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.summary-card:hover {
+  box-shadow: 0 4px 12px rgba(245, 108, 108, 0.15);
+  transform: translateY(-2px);
+}
+
+.summary-label {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 6px;
+}
+
+.summary-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f56c6c;
+  line-height: 1.3;
+}
+
+.repair-cost {
+  font-weight: 600;
+  color: #f56c6c;
 }
 </style>
