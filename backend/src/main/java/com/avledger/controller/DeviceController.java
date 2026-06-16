@@ -1,10 +1,12 @@
 package com.avledger.controller;
 
 import com.avledger.entity.Device;
+import com.avledger.entity.FirmwareRecord;
 import com.avledger.entity.MaintenanceRecord;
 import com.avledger.entity.RepairRecord;
 import com.avledger.enums.DeviceStatus;
 import com.avledger.enums.DeviceType;
+import com.avledger.repository.FirmwareRecordRepository;
 import com.avledger.repository.MaintenanceRecordRepository;
 import com.avledger.repository.RepairRecordRepository;
 import com.avledger.service.DeviceService;
@@ -23,6 +25,7 @@ public class DeviceController {
     private final DeviceService deviceService;
     private final MaintenanceRecordRepository maintenanceRecordRepository;
     private final RepairRecordRepository repairRecordRepository;
+    private final FirmwareRecordRepository firmwareRecordRepository;
 
     @GetMapping
     public ResponseEntity<List<Device>> findAll() {
@@ -133,6 +136,14 @@ public class DeviceController {
                 lastRepair.ifPresent(r -> {
                     item.put("lastRepairTime", r.getRepairTime().toString());
                     item.put("lastRepairSymptom", r.getSymptom());
+                });
+
+                Optional<FirmwareRecord> lastFirmware = firmwareRecordRepository
+                        .findTopByDeviceIdOrderByUpdateTimeDesc(d.getId());
+                lastFirmware.ifPresent(f -> {
+                    item.put("lastFirmwareVersion", f.getFirmwareVersion());
+                    item.put("lastFirmwareUpdateTime", f.getUpdateTime().toString());
+                    item.put("lastFirmwareDescription", f.getDescription());
                 });
 
                 deviceItems.add(item);

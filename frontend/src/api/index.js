@@ -68,4 +68,11 @@ export const updateMaintenance = (id, data) => request.put(`/maintenance/${id}`,
 export const deleteMaintenance = (id) => request.delete(`/maintenance/${id}`)
 export const getMaintenanceByType = (type) => request.get('/maintenance/type/' + type)
 
+export const getFirmwareByDevice = (deviceId) => request.get(`/firmware/device/${deviceId}`)
+export const getLatestFirmwareByDevice = (deviceId) => request.get(`/firmware/device/${deviceId}/latest`)
+export const getFirmware = (id) => request.get(`/firmware/${id}`)
+export const createFirmware = (data) => request.post('/firmware', data)
+export const updateFirmware = (id, data) => request.put(`/firmware/${id}`, data)
+export const deleteFirmware = (id) => request.delete(`/firmware/${id}`)
+
 export default request

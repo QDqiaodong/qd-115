@@ -65,6 +65,22 @@ CREATE TABLE IF NOT EXISTS maintenance_record (
     CONSTRAINT fk_maintenance_device FOREIGN KEY (device_id) REFERENCES device(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='日常养护记录';
 
+CREATE TABLE IF NOT EXISTS firmware_record (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    device_id BIGINT NOT NULL COMMENT '设备ID',
+    firmware_version VARCHAR(50) NOT NULL COMMENT '固件版本号',
+    update_time DATETIME NOT NULL COMMENT '更新时间',
+    description TEXT NOT NULL COMMENT '更新说明/处理说明',
+    operator VARCHAR(50) COMMENT '操作人',
+    remark VARCHAR(255) COMMENT '备注',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_device_id (device_id),
+    INDEX idx_firmware_version (firmware_version),
+    INDEX idx_update_time (update_time),
+    INDEX idx_device_update (device_id, update_time),
+    CONSTRAINT fk_firmware_device FOREIGN KEY (device_id) REFERENCES device(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='固件版本记录';
+
 -- 预置设备数据
 INSERT INTO device (name, model, device_type, purchase_date, location, hardware_specs, status) VALUES
 ('家庭影院主音响', 'Bose 901 Series VI', 'SPEAKER', '2023-03-15', '客厅电视墙', '频响范围 20Hz-20kHz, 功率 400W, 阻抗 8Ω', 'NORMAL'),
@@ -104,3 +120,21 @@ INSERT INTO maintenance_record (device_id, maintenance_time, maintenance_type, c
 (7, '2024-06-01 09:00:00', 'FIRMWARE', '升级tvOS至17.5版本, 更新应用程序', '户主', '系统自动更新'),
 (8, '2024-06-05 20:00:00', 'CLEANING', '清理音响出风口灰尘, 检查散热情况', '户主', '夏季高温前检查'),
 (2, '2024-06-10 15:00:00', 'CLEANING', '清洁投影镜头, 使用专用镜头布擦拭', '户主', '镜头出现轻微指纹');
+
+-- 预置固件版本记录
+INSERT INTO firmware_record (device_id, firmware_version, update_time, description, operator, remark) VALUES
+(2, 'v3.0.0', '2023-06-20 10:00:00', '出厂默认固件版本, 支持基础4K投影功能', '厂商', '出厂预装'),
+(2, 'v3.1.0', '2023-09-10 14:30:00', '新增自动梯形校正功能, 优化对焦速度', '户主', '官方固件推送'),
+(2, 'v3.2.0', '2024-02-15 16:00:00', '支持Dolby Vision, 优化HDR10+显示效果', '户主', '重大版本更新'),
+(2, 'v3.2.1', '2024-05-15 14:00:00', '修复已知Bug, 优化散热控制策略', '户主', '官方固件推送更新'),
+(3, 'v1.0.0', '2022-11-08 09:00:00', '出厂默认固件版本, 支持4K UHD蓝光播放', '厂商', '出厂预装'),
+(3, 'v1.1.5', '2023-03-20 11:00:00', '新增SACD播放支持, 优化音频解码', '户主', '官方固件更新'),
+(3, 'v1.2.0', '2023-08-05 15:30:00', '支持Dolby Atmos源码输出, 修复部分光盘兼容性问题', '户主', '重要功能更新'),
+(4, 'v2.0.0', '2023-01-10 10:00:00', '出厂默认固件版本, 支持8K HDMI输入', '厂商', '出厂预装'),
+(4, 'v2.1.0', '2023-06-18 14:00:00', '新增eARC支持, 优化Dirac Live校准', '户主', '官方固件推送'),
+(4, 'v2.2.1', '2024-04-10 09:30:00', '修复HDMI 2.1兼容性问题, 优化环绕声效果', '户主', '稳定性更新'),
+(7, 'tvOS 16.0', '2023-09-30 10:00:00', '出厂系统版本, 支持4K HDR输出', '厂商', '出厂预装'),
+(7, 'tvOS 17.0', '2023-11-15 16:00:00', '升级至tvOS 17, 新增增强对话功能', '户主', '系统大版本更新'),
+(7, 'tvOS 17.5', '2024-06-01 09:00:00', '优化性能, 修复安全漏洞, 更新应用程序', '户主', '系统自动更新'),
+(6, 'v1.5.0', '2024-02-14 10:00:00', '出厂默认固件版本', '厂商', '出厂预装'),
+(6, 'v1.5.2', '2024-04-01 14:00:00', '优化亮度输出, 修复自动对焦问题', '户主', '官方固件更新');
