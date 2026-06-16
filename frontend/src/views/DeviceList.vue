@@ -222,7 +222,8 @@ const formRules = {
   name: [{ required: true, message: '请输入设备名称', trigger: 'blur' }],
   model: [{ required: true, message: '请输入设备型号', trigger: 'blur' }],
   deviceType: [{ required: true, message: '请选择设备类型', trigger: 'change' }],
-  status: [{ required: true, message: '请选择设备状态', trigger: 'change' }]
+  status: [{ required: true, message: '请选择设备状态', trigger: 'change' }],
+  purchaseDate: [{ required: true, message: '请选择购入日期', trigger: 'change' }]
 }
 
 const detailVisible = ref(false)
@@ -399,7 +400,10 @@ const submitForm = async () => {
     formVisible.value = false
     fetchDevices()
   } catch (e) {
-    if (e !== false) ElMessage.error('操作失败')
+    if (e !== false) {
+      const interceptorMsg = e?.response?.data?.message
+      if (!interceptorMsg) ElMessage.error('操作失败')
+    }
   }
 }
 

@@ -10,6 +10,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -101,14 +102,36 @@ public class DeviceService {
     @CacheEvict(value = {"devices", "deviceCategories"}, allEntries = true)
     @Transactional
     public List<Device> batchUpdate(List<Device> devices) {
+        List<Device> result = new ArrayList<>();
         for (Device device : devices) {
-            if (device.getId() != null && device.getStatus() != null) {
-                Device existing = deviceRepository.findById(device.getId()).orElse(null);
-                if (existing != null && device.getStatus() != existing.getStatus()) {
-                    validateTransition(existing.getStatus(), device.getStatus());
-                }
+            if (device.getId() == null) continue;
+            Device existing = deviceRepository.findById(device.getId()).orElse(null);
+            if (existing == null) continue;
+
+            if (device.getStatus() != null && device.getStatus() != existing.getStatus()) {
+                validateTransition(existing.getStatus(), device.getStatus());
+                existing.setStatus(device.getStatus());
             }
+            if (device.getName() != null) {
+                existing.setName(device.getName());
+            }
+            if (device.getModel() != null) {
+                existing.setModel(device.getModel());
+            }
+            if (device.getDeviceType() != null) {
+                existing.setDeviceType(device.getDeviceType());
+            }
+            if (device.getPurchaseDate() != null) {
+                existing.setPurchaseDate(device.getPurchaseDate());
+            }
+            if (device.getLocation() != null) {
+                existing.setLocation(device.getLocation());
+            }
+            if (device.getHardwareSpecs() != null) {
+                existing.setHardwareSpecs(device.getHardwareSpecs());
+            }
+            result.add(deviceRepository.save(existing));
         }
-        return deviceRepository.saveAll(devices);
+        return result;
     }
 }
