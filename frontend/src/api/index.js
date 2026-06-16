@@ -31,6 +31,7 @@ export const batchUpdateDevices = (data) => request.put('/devices/batch', data)
 export const getAllowedTransitions = (id) => request.get(`/devices/${id}/allowed-transitions`)
 export const transitionDeviceStatus = (id, targetStatus) => request.put(`/devices/${id}/transition`, { targetStatus })
 export const getStatusWall = () => request.get('/devices/status-wall')
+export const getHealthScore = (id) => request.get(`/devices/health-score/${id}`)
 
 export const getUsageByDevice = (deviceId) => request.get(`/usage/device/${deviceId}`)
 export const createUsage = (data) => request.post('/usage', data)

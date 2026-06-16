@@ -10,6 +10,7 @@ import com.avledger.repository.FirmwareRecordRepository;
 import com.avledger.repository.MaintenanceRecordRepository;
 import com.avledger.repository.RepairRecordRepository;
 import com.avledger.service.DeviceService;
+import com.avledger.service.HealthScoreService;
 import com.avledger.service.MaintenanceIntervalService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,7 @@ public class DeviceController {
     private final RepairRecordRepository repairRecordRepository;
     private final FirmwareRecordRepository firmwareRecordRepository;
     private final MaintenanceIntervalService maintenanceIntervalService;
+    private final HealthScoreService healthScoreService;
 
     @GetMapping
     public ResponseEntity<List<Device>> findAll() {
@@ -127,6 +129,13 @@ public class DeviceController {
         return ResponseEntity.ok(summaries);
     }
 
+    @GetMapping("/health-score/{id}")
+    public ResponseEntity<Map<String, Object>> getHealthScore(@PathVariable Long id) {
+        return deviceService.findById(id)
+                .map(device -> ResponseEntity.ok(healthScoreService.calculateHealthScore(device)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/status-wall")
     public ResponseEntity<List<Map<String, Object>>> getStatusWall() {
         List<Device> allDevices = deviceService.findAll();
@@ -171,6 +180,8 @@ public class DeviceController {
                     item.put("lastFirmwareUpdateTime", f.getUpdateTime().toString());
                     item.put("lastFirmwareDescription", f.getDescription());
                 });
+
+                item.put("healthScore", healthScoreService.calculateHealthScore(d));
 
                 deviceItems.add(item);
             }

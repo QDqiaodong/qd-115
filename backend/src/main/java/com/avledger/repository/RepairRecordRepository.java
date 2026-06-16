@@ -15,4 +15,6 @@ public interface RepairRecordRepository extends JpaRepository<RepairRecord, Long
     List<RepairRecord> findTop10ByOrderByRepairTimeDesc();
 
     Optional<RepairRecord> findTopByDeviceIdOrderByRepairTimeDesc(Long deviceId);
+
+    long countByDeviceId(Long deviceId);
 }
