@@ -21,6 +21,7 @@ request.interceptors.response.use(
 
 export const getDevices = () => request.get('/devices')
 export const getDevice = (id) => request.get(`/devices/${id}`)
+export const getDeviceMaintenanceSummaries = () => request.get('/devices/maintenance-summaries')
 export const createDevice = (data) => request.post('/devices', data)
 export const updateDevice = (id, data) => request.put(`/devices/${id}`, data)
 export const deleteDevice = (id) => request.delete(`/devices/${id}`)
@@ -67,6 +68,22 @@ export const createMaintenance = (data) => request.post('/maintenance', data)
 export const updateMaintenance = (id, data) => request.put(`/maintenance/${id}`, data)
 export const deleteMaintenance = (id) => request.delete(`/maintenance/${id}`)
 export const getMaintenanceByType = (type) => request.get('/maintenance/type/' + type)
+
+export const getMaintenanceIntervals = () => request.get('/maintenance-interval/intervals')
+export const getMaintenanceIntervalsByType = (deviceType) => request.get(`/maintenance-interval/intervals/${deviceType}`)
+export const getNextMaintenanceWindow = (deviceType, lastMaintenanceTime, maintenanceType) => {
+  const params = new URLSearchParams()
+  params.append('deviceType', deviceType)
+  params.append('lastMaintenanceTime', lastMaintenanceTime)
+  params.append('maintenanceType', maintenanceType)
+  return request.get(`/maintenance-interval/next-window?${params.toString()}`)
+}
+export const getNextMaintenanceWindows = (deviceType, lastMaintenanceTime) => {
+  const params = new URLSearchParams()
+  params.append('deviceType', deviceType)
+  if (lastMaintenanceTime) params.append('lastMaintenanceTime', lastMaintenanceTime)
+  return request.get(`/maintenance-interval/next-windows?${params.toString()}`)
+}
 
 export const getFirmwareByDevice = (deviceId) => request.get(`/firmware/device/${deviceId}`)
 export const getLatestFirmwareByDevice = (deviceId) => request.get(`/firmware/device/${deviceId}/latest`)

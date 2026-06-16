@@ -12,6 +12,11 @@
       <h3 class="device-name">{{ device.name }}</h3>
       <p class="device-model">{{ device.model }}</p>
       <el-tag size="small" type="info" class="type-tag">{{ typeLabel }}</el-tag>
+      <div v-if="maintenanceIndicator" class="maintenance-badge" :class="{ overdue: maintenanceIndicator.overdue }">
+        <el-icon :size="12"><Warning /></el-icon>
+        <span v-if="maintenanceIndicator.overdue">逾期{{ Math.abs(maintenanceIndicator.daysUntil) }}天</span>
+        <span v-else>{{ maintenanceIndicator.maintenanceTypeLabel }} {{ maintenanceIndicator.daysUntil }}天</span>
+      </div>
       <div class="device-info">
         <p><span class="label">购入日期：</span>{{ device.purchaseDate }}</p>
         <p><span class="label">位置：</span>{{ device.location || '-' }}</p>
@@ -28,10 +33,12 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { Headset, Monitor, VideoPlay, Microphone } from '@element-plus/icons-vue'
+import { Headset, Monitor, VideoPlay, Microphone, Warning } from '@element-plus/icons-vue'
+import { calculateNextWindows, getEarliestUrgentWindow } from '../utils/maintenanceInterval'
 
 const props = defineProps({
-  device: { type: Object, required: true }
+  device: { type: Object, required: true },
+  lastMaintenanceTime: { type: String, default: null }
 })
 
 defineEmits(['edit', 'delete', 'detail'])
@@ -54,6 +61,12 @@ const statusType = computed(() => {
 })
 
 const statusLabel = computed(() => statusMap[props.device.status] || '未知')
+
+const maintenanceIndicator = computed(() => {
+  if (!props.lastMaintenanceTime) return null
+  const windows = calculateNextWindows(props.device.deviceType, props.lastMaintenanceTime)
+  return getEarliestUrgentWindow(windows)
+})
 </script>
 
 <style scoped>
@@ -94,6 +107,25 @@ const statusLabel = computed(() => statusMap[props.device.status] || '未知')
 }
 .type-tag {
   margin-bottom: 10px;
+}
+.maintenance-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #e6a23c;
+  background: #fdf6ec;
+  border: 1px solid #faecd8;
+  border-radius: 10px;
+  padding: 2px 8px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.maintenance-badge.overdue {
+  color: #f56c6c;
+  background: #fef0f0;
+  border-color: #fde2e2;
 }
 .device-info p {
   font-size: 13px;

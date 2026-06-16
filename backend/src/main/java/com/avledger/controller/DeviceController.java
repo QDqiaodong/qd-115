@@ -10,6 +10,7 @@ import com.avledger.repository.FirmwareRecordRepository;
 import com.avledger.repository.MaintenanceRecordRepository;
 import com.avledger.repository.RepairRecordRepository;
 import com.avledger.service.DeviceService;
+import com.avledger.service.MaintenanceIntervalService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +27,7 @@ public class DeviceController {
     private final MaintenanceRecordRepository maintenanceRecordRepository;
     private final RepairRecordRepository repairRecordRepository;
     private final FirmwareRecordRepository firmwareRecordRepository;
+    private final MaintenanceIntervalService maintenanceIntervalService;
 
     @GetMapping
     public ResponseEntity<List<Device>> findAll() {
@@ -105,6 +107,26 @@ public class DeviceController {
         return ResponseEntity.ok(deviceService.batchUpdate(devices));
     }
 
+    @GetMapping("/maintenance-summaries")
+    public ResponseEntity<Map<Long, Map<String, Object>>> getMaintenanceSummaries() {
+        List<Device> allDevices = deviceService.findAll();
+        Map<Long, Map<String, Object>> summaries = new LinkedHashMap<>();
+        for (Device d : allDevices) {
+            Map<String, Object> info = new LinkedHashMap<>();
+            Optional<MaintenanceRecord> lastMaintenance = maintenanceRecordRepository
+                    .findTopByDeviceIdOrderByMaintenanceTimeDesc(d.getId());
+            lastMaintenance.ifPresent(m -> {
+                info.put("lastMaintenanceTime", m.getMaintenanceTime().toString());
+                info.put("lastMaintenanceType", m.getMaintenanceType().name());
+            });
+            info.put("nextMaintenanceWindows", maintenanceIntervalService.calculateNextWindows(
+                    d.getDeviceType(),
+                    lastMaintenance.map(MaintenanceRecord::getMaintenanceTime).orElse(null)));
+            summaries.put(d.getId(), info);
+        }
+        return ResponseEntity.ok(summaries);
+    }
+
     @GetMapping("/status-wall")
     public ResponseEntity<List<Map<String, Object>>> getStatusWall() {
         List<Device> allDevices = deviceService.findAll();
@@ -130,6 +152,10 @@ public class DeviceController {
                     item.put("lastMaintenanceContent", m.getContent());
                     item.put("lastMaintenanceType", m.getMaintenanceType().name());
                 });
+
+                item.put("nextMaintenanceWindows", maintenanceIntervalService.calculateNextWindows(
+                        d.getDeviceType(),
+                        lastMaintenance.map(MaintenanceRecord::getMaintenanceTime).orElse(null)));
 
                 Optional<RepairRecord> lastRepair = repairRecordRepository
                         .findTopByDeviceIdOrderByRepairTimeDesc(d.getId());

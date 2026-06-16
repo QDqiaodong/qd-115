@@ -16,6 +16,31 @@
       <el-tab-pane label="其他" name="OTHER" />
     </el-tabs>
 
+    <el-card shadow="never" v-if="nextMaintenanceWindows" class="next-window-card">
+      <div class="card-title-row">
+        <span class="card-title">下次保养窗口</span>
+        <el-tag v-if="earliestUrgentWindow" :type="earliestUrgentWindow.overdue ? 'danger' : 'warning'" size="small" effect="dark">
+          <el-icon :size="12"><Warning /></el-icon>
+          {{ earliestUrgentWindow.overdue ? '逾期' + Math.abs(earliestUrgentWindow.daysUntil) + '天' : earliestUrgentWindow.maintenanceTypeLabel + '即将到期' }}
+        </el-tag>
+      </div>
+      <el-row :gutter="12" class="window-row">
+        <el-col :span="6" v-for="w in Object.values(nextMaintenanceWindows)" :key="w.maintenanceType">
+          <div class="mt-window-card" :class="{ overdue: w.overdue, urgent: w.urgent }">
+            <div class="mt-window-type">{{ w.maintenanceTypeLabel }}</div>
+            <div class="mt-window-interval">每 {{ w.intervalDays }} 天</div>
+            <div class="mt-window-next" v-if="w.nextTime">{{ w.nextTime }}</div>
+            <div class="mt-window-next no-data" v-else>暂无记录</div>
+            <div class="mt-window-status" v-if="w.nextTime">
+              <el-tag v-if="w.overdue" type="danger" size="small">逾期{{ Math.abs(w.daysUntil) }}天</el-tag>
+              <el-tag v-else-if="w.urgent" type="warning" size="small">即将到期</el-tag>
+              <el-tag v-else type="success" size="small">剩余{{ w.daysUntil }}天</el-tag>
+            </div>
+          </div>
+        </el-col>
+      </el-row>
+    </el-card>
+
     <el-card shadow="never">
       <el-table :data="filteredList" v-loading="loading" stripe>
         <el-table-column prop="maintenanceTime" label="养护时间" width="180" />
@@ -78,8 +103,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Warning } from '@element-plus/icons-vue'
 import { getDevices, getMaintenanceByDevice, createMaintenance, updateMaintenance, deleteMaintenance } from '../api'
+import { calculateNextWindows, getEarliestUrgentWindow } from '../utils/maintenanceInterval'
 
 const deviceList = ref([])
 const selectedDeviceId = ref('')
@@ -96,6 +122,22 @@ const typeTagColor = (t) => mtColorMap[t] || 'info'
 const filteredList = computed(() => {
   if (!activeType.value) return maintenanceList.value
   return maintenanceList.value.filter(item => item.maintenanceType === activeType.value)
+})
+
+const selectedDevice = computed(() => {
+  if (!selectedDeviceId.value) return null
+  return deviceList.value.find(d => d.id === selectedDeviceId.value) || null
+})
+
+const nextMaintenanceWindows = computed(() => {
+  if (!selectedDevice.value || maintenanceList.value.length === 0) return null
+  const sorted = [...maintenanceList.value].sort((a, b) => new Date(b.maintenanceTime) - new Date(a.maintenanceTime))
+  const lastTime = sorted[0].maintenanceTime
+  return calculateNextWindows(selectedDevice.value.deviceType, lastTime)
+})
+
+const earliestUrgentWindow = computed(() => {
+  return getEarliestUrgentWindow(nextMaintenanceWindows.value)
 })
 
 const formVisible = ref(false)
@@ -237,4 +279,61 @@ onMounted(async () => {
   padding: 0 16px;
   border-radius: 8px;
 }
+.next-window-card {
+  margin-bottom: 16px;
+}
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+.window-row { margin-top: 4px; }
+.mt-window-card {
+  background: linear-gradient(135deg, #f8faff 0%, #ffffff 100%);
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  transition: all 0.3s;
+}
+.mt-window-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+.mt-window-card.overdue {
+  border-color: #fde2e2;
+  background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
+}
+.mt-window-card.urgent {
+  border-color: #faecd8;
+  background: linear-gradient(135deg, #fdf6ec 0%, #ffffff 100%);
+}
+.mt-window-type {
+  font-size: 13px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 4px;
+}
+.mt-window-interval {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 6px;
+}
+.mt-window-next {
+  font-size: 12px;
+  font-weight: 600;
+  color: #409EFF;
+  margin-bottom: 6px;
+}
+.mt-window-next.no-data {
+  color: #c0c4cc;
+  font-weight: 400;
+}
+.mt-window-status { margin-top: 2px; }
 </style>

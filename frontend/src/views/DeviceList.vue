@@ -29,6 +29,7 @@
       <el-col :span="6" v-for="device in filteredDevices" :key="device.id">
         <DeviceCard
           :device="device"
+          :lastMaintenanceTime="maintenanceSummaries[device.id]?.lastMaintenanceTime || null"
           @edit="openForm"
           @delete="handleDelete"
           @detail="openDetail"
@@ -119,6 +120,36 @@
                 </div>
               </el-col>
             </el-row>
+
+            <div class="next-maintenance-section" v-if="nextMaintenanceWindows">
+              <div class="section-title">下次保养窗口</div>
+              <div v-if="earliestUrgentWindow" class="urgent-banner" :class="{ overdue: earliestUrgentWindow.overdue }">
+                <el-icon :size="16"><Warning /></el-icon>
+                <span v-if="earliestUrgentWindow.overdue">
+                  {{ earliestUrgentWindow.maintenanceTypeLabel }}已逾期 {{ Math.abs(earliestUrgentWindow.daysUntil) }} 天
+                </span>
+                <span v-else>
+                  {{ earliestUrgentWindow.maintenanceTypeLabel }}将于 {{ earliestUrgentWindow.daysUntil }} 天后到期
+                </span>
+              </div>
+              <el-row :gutter="12" style="margin-top: 12px">
+                <el-col :span="6" v-for="w in Object.values(nextMaintenanceWindows)" :key="w.maintenanceType">
+                  <div class="window-card" :class="{ overdue: w.overdue, urgent: w.urgent }">
+                    <div class="window-type">{{ w.maintenanceTypeLabel }}</div>
+                    <div class="window-interval">每 {{ w.intervalDays }} 天</div>
+                    <div class="window-next" v-if="w.nextTime">
+                      {{ w.nextTime }}
+                    </div>
+                    <div class="window-next no-data" v-else>暂无记录</div>
+                    <div class="window-status" v-if="w.nextTime">
+                      <el-tag v-if="w.overdue" type="danger" size="small" effect="dark">逾期{{ Math.abs(w.daysUntil) }}天</el-tag>
+                      <el-tag v-else-if="w.urgent" type="warning" size="small" effect="dark">即将到期</el-tag>
+                      <el-tag v-else type="success" size="small" effect="dark">剩余{{ w.daysUntil }}天</el-tag>
+                    </div>
+                  </div>
+                </el-col>
+              </el-row>
+            </div>
 
             <div class="timeline-section">
               <div class="section-title">运维时间线</div>
@@ -227,19 +258,22 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus, Edit, TrendCharts } from '@element-plus/icons-vue'
+import { Search, Plus, Edit, TrendCharts, Warning } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import DeviceCard from '../components/DeviceCard.vue'
 import BatchEdit from '../components/BatchEdit.vue'
 import {
   getDevices, createDevice, updateDevice, deleteDevice, batchUpdateDevices,
-  getUsageByDevice, getRepairByDevice, getMaintenanceByDevice, getUsageStats
+  getUsageByDevice, getRepairByDevice, getMaintenanceByDevice, getUsageStats,
+  getDeviceMaintenanceSummaries
 } from '../api'
+import { calculateNextWindows, getEarliestUrgentWindow } from '../utils/maintenanceInterval'
 
 const devices = ref([])
 const searchText = ref('')
 const filterType = ref('')
 const filterStatus = ref('')
+const maintenanceSummaries = ref({})
 
 const typeMap = { SPEAKER: '音响', PROJECTOR: '投影仪', PLAYER: '播放器', AMPLIFIER: '功放' }
 const statusMap = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '维修中', RETIRED: '退役' }
@@ -299,6 +333,17 @@ const maxRepairCost = computed(() => {
 })
 
 const batchEditVisible = ref(false)
+
+const nextMaintenanceWindows = computed(() => {
+  if (!currentDevice.value) return null
+  const sorted = [...detailMaintenanceList.value].sort((a, b) => new Date(b.maintenanceTime) - new Date(a.maintenanceTime))
+  const lastTime = sorted.length > 0 ? sorted[0].maintenanceTime : null
+  return calculateNextWindows(currentDevice.value.deviceType, lastTime)
+})
+
+const earliestUrgentWindow = computed(() => {
+  return getEarliestUrgentWindow(nextMaintenanceWindows.value)
+})
 
 const TRANSITION_RULES = {
   NORMAL: ['FAULTY', 'MAINTENANCE', 'RETIRED'],
@@ -425,8 +470,12 @@ const timelineTypeLabel = (type) => {
 
 const fetchDevices = async () => {
   try {
-    const res = await getDevices()
-    devices.value = Array.isArray(res) ? res : []
+    const [deviceRes, summaryRes] = await Promise.all([
+      getDevices(),
+      getDeviceMaintenanceSummaries().catch(() => ({}))
+    ])
+    devices.value = Array.isArray(deviceRes) ? deviceRes : []
+    maintenanceSummaries.value = summaryRes || {}
   } catch (e) {
     ElMessage.error('获取设备列表失败')
   }
@@ -713,6 +762,77 @@ onMounted(fetchDevices)
 .overview-card-sub {
   font-size: 12px;
   color: #c0c4cc;
+}
+
+.next-maintenance-section {
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.urgent-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #fdf6ec 0%, #fff7e6 100%);
+  border: 1px solid #faecd8;
+  color: #e6a23c;
+  font-size: 13px;
+  font-weight: 600;
+}
+.urgent-banner.overdue {
+  background: linear-gradient(135deg, #fef0f0 0%, #fff1f0 100%);
+  border-color: #fde2e2;
+  color: #f56c6c;
+}
+.window-card {
+  background: linear-gradient(135deg, #f8faff 0%, #ffffff 100%);
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+  transition: all 0.3s;
+  position: relative;
+}
+.window-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+.window-card.overdue {
+  border-color: #fde2e2;
+  background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
+}
+.window-card.urgent {
+  border-color: #faecd8;
+  background: linear-gradient(135deg, #fdf6ec 0%, #ffffff 100%);
+}
+.window-type {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 6px;
+}
+.window-interval {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 8px;
+}
+.window-next {
+  font-size: 13px;
+  font-weight: 600;
+  color: #409EFF;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+.window-next.no-data {
+  color: #c0c4cc;
+  font-weight: 400;
+}
+.window-status {
+  margin-top: 4px;
 }
 
 .timeline-section {

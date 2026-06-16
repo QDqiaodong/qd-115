@@ -67,6 +67,10 @@
                 暂无维护记录
               </div>
             </div>
+            <div v-if="getNextWindowSummary(device)" class="tile-next-window" :class="{ overdue: getNextWindowSummary(device).overdue }">
+              <el-icon :size="11" :color="getNextWindowSummary(device).overdue ? '#F56C6C' : '#E6A23C'"><Warning /></el-icon>
+              <span>{{ getNextWindowSummary(device).overdue ? '逾期' + Math.abs(getNextWindowSummary(device).daysUntil) + '天' : '下次保养 ' + getNextWindowSummary(device).daysUntil + '天' }}</span>
+            </div>
           </div>
           <el-empty v-if="group.devices.length === 0" description="暂无设备" :image-size="60" />
         </div>
@@ -112,6 +116,26 @@ const statusTagType = (status) => {
 const formatTime = (str) => {
   if (!str) return '-'
   return str.length > 16 ? str.slice(0, 16).replace('T', ' ') : str.replace('T', ' ')
+}
+
+const getNextWindowSummary = (device) => {
+  if (!device.nextMaintenanceWindows) return null
+  const windows = device.nextMaintenanceWindows
+  let earliest = null
+  for (const type in windows) {
+    const w = windows[type]
+    if (w.nextTime) {
+      const nextDate = new Date(w.nextTime)
+      if (!isNaN(nextDate.getTime())) {
+        const now = new Date()
+        const diffDays = Math.ceil((nextDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+        if (earliest === null || diffDays < earliest.daysUntil) {
+          earliest = { maintenanceType: type, daysUntil: diffDays, nextTime: w.nextTime, overdue: diffDays < 0 }
+        }
+      }
+    }
+  }
+  return earliest
 }
 
 const fetchData = async () => {
@@ -320,5 +344,19 @@ onMounted(fetchData)
 .tile-last-action.no-record {
   color: #c0c4cc;
   font-style: italic;
+}
+.tile-next-window {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #f2f3f5;
+  font-size: 11px;
+  font-weight: 600;
+  color: #e6a23c;
+}
+.tile-next-window.overdue {
+  color: #f56c6c;
 }
 </style>
