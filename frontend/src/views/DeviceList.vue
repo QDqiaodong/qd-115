@@ -75,6 +75,15 @@
         <el-form-item label="硬件规格" prop="hardwareSpecs">
           <el-input v-model="form.hardwareSpecs" type="textarea" :rows="3" placeholder="请输入硬件规格参数" />
         </el-form-item>
+        <template v-if="form.deviceType === 'PROJECTOR'">
+          <el-divider content-position="left">灯泡信息</el-divider>
+          <el-form-item label="灯泡安装日期" prop="lampInstallDate">
+            <el-date-picker v-model="form.lampInstallDate" type="date" value-format="YYYY-MM-DD" placeholder="选择灯泡安装日期" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="更换阈值(小时)" prop="lampReplaceHours">
+            <el-input-number v-model="form.lampReplaceHours" :min="1" :max="100000" placeholder="请输入更换阈值" style="width: 100%" />
+          </el-form-item>
+        </template>
       </el-form>
       <template #footer>
         <el-button @click="formVisible = false">取消</el-button>
@@ -85,16 +94,20 @@
     <el-drawer v-model="detailVisible" :title="currentDevice?.name || '设备详情'" size="550px">
       <template v-if="currentDevice">
         <el-descriptions :column="1" border>
-          <el-descriptions-item label="设备名称">{{ currentDevice.name }}</el-descriptions-item>
-          <el-descriptions-item label="设备型号">{{ currentDevice.model }}</el-descriptions-item>
-          <el-descriptions-item label="设备类型">{{ typeMap[currentDevice.deviceType] || currentDevice.deviceType }}</el-descriptions-item>
-          <el-descriptions-item label="设备状态">
-            <el-tag :type="statusTagType(currentDevice.status)" size="small">{{ statusMap[currentDevice.status] }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="购入日期">{{ currentDevice.purchaseDate }}</el-descriptions-item>
-          <el-descriptions-item label="存放位置">{{ currentDevice.location || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="硬件规格">{{ currentDevice.hardwareSpecs || '-' }}</el-descriptions-item>
-        </el-descriptions>
+            <el-descriptions-item label="设备名称">{{ currentDevice.name }}</el-descriptions-item>
+            <el-descriptions-item label="设备型号">{{ currentDevice.model }}</el-descriptions-item>
+            <el-descriptions-item label="设备类型">{{ typeMap[currentDevice.deviceType] || currentDevice.deviceType }}</el-descriptions-item>
+            <el-descriptions-item label="设备状态">
+              <el-tag :type="statusTagType(currentDevice.status)" size="small">{{ statusMap[currentDevice.status] }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="购入日期">{{ currentDevice.purchaseDate }}</el-descriptions-item>
+            <el-descriptions-item label="存放位置">{{ currentDevice.location || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="硬件规格">{{ currentDevice.hardwareSpecs || '-' }}</el-descriptions-item>
+            <template v-if="currentDevice.deviceType === 'PROJECTOR'">
+              <el-descriptions-item label="灯泡安装日期">{{ currentDevice.lampInstallDate || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="灯泡更换阈值">{{ currentDevice.lampReplaceHours ? currentDevice.lampReplaceHours + ' 小时' : '-' }}</el-descriptions-item>
+            </template>
+          </el-descriptions>
         <el-tabs v-model="detailTab" style="margin-top: 20px">
           <el-tab-pane label="运维总览" name="overview">
             <el-row :gutter="12" class="overview-stats">
@@ -149,6 +162,44 @@
                   </div>
                 </el-col>
               </el-row>
+            </div>
+
+            <div class="lamp-life-section" v-if="lampLifeInfo?.available">
+              <div class="section-title">
+                <el-icon><Sunny /></el-icon>
+                灯泡寿命
+              </div>
+              <div class="lamp-life-card" :class="{ expired: lampLifeInfo.status === 'EXPIRED', warning: lampLifeInfo.status === 'WARNING' }">
+                <div class="lamp-life-header">
+                  <div class="lamp-life-status" :style="{ color: lampColor(lampLifeInfo.status) }">
+                    <el-icon :size="18"><Sunny /></el-icon>
+                    <span>{{ lampStatusLabel(lampLifeInfo.status) }}</span>
+                  </div>
+                  <div class="lamp-life-percent" :style="{ color: lampColor(lampLifeInfo.status) }">
+                    {{ lampLifeInfo.usedPercent?.toFixed(1) }}%
+                  </div>
+                </div>
+                <div class="lamp-life-bar-track">
+                  <div class="lamp-life-bar-fill" :style="{ width: lampLifeInfo.usedPercent + '%', background: lampColor(lampLifeInfo.status) }"></div>
+                </div>
+                <el-row :gutter="12" class="lamp-life-stats">
+                  <el-col :span="8">
+                    <div class="lamp-stat-label">已使用</div>
+                    <div class="lamp-stat-value">{{ lampLifeInfo.usedHours }} 小时</div>
+                  </el-col>
+                  <el-col :span="8">
+                    <div class="lamp-stat-label">更换阈值</div>
+                    <div class="lamp-stat-value">{{ lampLifeInfo.lampReplaceHours }} 小时</div>
+                  </el-col>
+                  <el-col :span="8">
+                    <div class="lamp-stat-label">剩余寿命</div>
+                    <div class="lamp-stat-value" :style="{ color: lampColor(lampLifeInfo.status) }">{{ lampLifeInfo.remainingHours }} 小时</div>
+                  </el-col>
+                </el-row>
+                <div class="lamp-install-date">
+                  灯泡安装日期：{{ lampLifeInfo.lampInstallDate || '未设置' }}
+                </div>
+              </div>
             </div>
 
             <div class="timeline-section">
@@ -258,14 +309,14 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus, Edit, TrendCharts, Warning } from '@element-plus/icons-vue'
+import { Search, Plus, Edit, TrendCharts, Warning, Sunny } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import DeviceCard from '../components/DeviceCard.vue'
 import BatchEdit from '../components/BatchEdit.vue'
 import {
   getDevices, createDevice, updateDevice, deleteDevice, batchUpdateDevices,
   getUsageByDevice, getRepairByDevice, getMaintenanceByDevice, getUsageStats,
-  getDeviceMaintenanceSummaries
+  getDeviceMaintenanceSummaries, getLampLife
 } from '../api'
 import { calculateNextWindows, getEarliestUrgentWindow } from '../utils/maintenanceInterval'
 
@@ -284,7 +335,8 @@ const formMode = ref('create')
 const formRef = ref(null)
 const form = ref({
   name: '', model: '', deviceType: '', status: 'NORMAL',
-  purchaseDate: '', location: '', hardwareSpecs: ''
+  purchaseDate: '', location: '', hardwareSpecs: '',
+  lampInstallDate: '', lampReplaceHours: null
 })
 
 const formRules = {
@@ -302,6 +354,7 @@ const detailUsageList = ref([])
 const detailRepairList = ref([])
 const detailMaintenanceList = ref([])
 const detailLoading = ref(false)
+const lampLifeInfo = ref(null)
 const overviewStats = ref({
   totalDuration: '0时0分',
   lastRepairTime: '-',
@@ -381,6 +434,16 @@ const filteredDevices = computed(() => {
 const statusTagType = (status) => {
   const map = { NORMAL: 'success', FAULTY: 'danger', MAINTENANCE: 'warning', RETIRED: 'info' }
   return map[status] || 'info'
+}
+
+const lampColor = (status) => {
+  const map = { NORMAL: '#67C23A', CAUTION: '#E6A23C', WARNING: '#F56C6C', EXPIRED: '#C45656' }
+  return map[status] || '#909399'
+}
+
+const lampStatusLabel = (status) => {
+  const map = { NORMAL: '正常', CAUTION: '注意', WARNING: '警告', EXPIRED: '已到期', UNSET: '未设置' }
+  return map[status] || status
 }
 
 const formatDuration = (minutes) => {
@@ -487,7 +550,11 @@ const openForm = (device = null) => {
     form.value = { ...device, originalStatus: device.status }
   } else {
     formMode.value = 'create'
-    form.value = { name: '', model: '', deviceType: '', status: 'NORMAL', purchaseDate: '', location: '', hardwareSpecs: '', originalStatus: '' }
+    form.value = {
+      name: '', model: '', deviceType: '', status: 'NORMAL',
+      purchaseDate: '', location: '', hardwareSpecs: '',
+      lampInstallDate: '', lampReplaceHours: null, originalStatus: ''
+    }
   }
   formVisible.value = true
 }
@@ -686,16 +753,19 @@ const openDetail = async (device) => {
   detailVisible.value = true
   detailTab.value = 'overview'
   detailLoading.value = true
+  lampLifeInfo.value = null
   try {
-    const [usage, repair, maintenance, usageStats] = await Promise.all([
+    const [usage, repair, maintenance, usageStats, lampLife] = await Promise.all([
       getUsageByDevice(device.id).catch(() => []),
       getRepairByDevice(device.id).catch(() => []),
       getMaintenanceByDevice(device.id).catch(() => []),
-      getUsageStats(device.id).catch(() => null)
+      getUsageStats(device.id).catch(() => null),
+      device.deviceType === 'PROJECTOR' ? getLampLife(device.id).catch(() => null) : Promise.resolve(null)
     ])
     detailUsageList.value = Array.isArray(usage) ? usage : []
     detailRepairList.value = Array.isArray(repair) ? repair : []
     detailMaintenanceList.value = Array.isArray(maintenance) ? maintenance : []
+    lampLifeInfo.value = lampLife
     calcOverviewStats(detailUsageList.value, detailRepairList.value, detailMaintenanceList.value, usageStats)
   } catch (e) {
     ElMessage.error('获取详情数据失败')
@@ -833,6 +903,86 @@ onMounted(fetchDevices)
 }
 .window-status {
   margin-top: 4px;
+}
+
+.lamp-life-section {
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.lamp-life-section .section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: '#E6A23C';
+}
+.lamp-life-card {
+  background: linear-gradient(135deg, #f0f9eb 0%, #ffffff 100%);
+  border: 1px solid #e1f3d8;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.3s;
+}
+.lamp-life-card.warning {
+  background: linear-gradient(135deg, #fdf6ec 0%, #ffffff 100%);
+  border-color: #faecd8;
+}
+.lamp-life-card.expired {
+  background: linear-gradient(135deg, #fef0f0 0%, #ffffff 100%);
+  border-color: #fde2e2;
+}
+.lamp-life-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.lamp-life-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.lamp-life-percent {
+  font-size: 20px;
+  font-weight: 700;
+}
+.lamp-life-bar-track {
+  height: 10px;
+  background: #ebeef5;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.lamp-life-bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.5s ease, background 0.5s ease;
+}
+.lamp-life-stats {
+  margin-bottom: 12px;
+}
+.lamp-stat-label {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 4px;
+  text-align: center;
+}
+.lamp-stat-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  text-align: center;
+}
+.lamp-install-date {
+  font-size: 12px;
+  color: #909399;
+  text-align: center;
+  padding-top: 8px;
+  border-top: 1px solid #ebeef5;
 }
 
 .timeline-section {

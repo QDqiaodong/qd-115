@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS device (
     location VARCHAR(100) COMMENT '摆放位置',
     hardware_specs TEXT COMMENT '硬件参数',
     status VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '设备状态',
+    lamp_install_date DATE COMMENT '灯泡安装日期',
+    lamp_replace_hours INT COMMENT '灯泡更换阈值(小时)',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_device_type (device_type),
@@ -82,15 +84,15 @@ CREATE TABLE IF NOT EXISTS firmware_record (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='固件版本记录';
 
 -- 预置设备数据
-INSERT INTO device (name, model, device_type, purchase_date, location, hardware_specs, status) VALUES
-('家庭影院主音响', 'Bose 901 Series VI', 'SPEAKER', '2023-03-15', '客厅电视墙', '频响范围 20Hz-20kHz, 功率 400W, 阻抗 8Ω', 'NORMAL'),
-('4K激光投影仪', 'XGIMI Aura 4K', 'PROJECTOR', '2023-06-20', '客厅吊顶', '4K UHD分辨率, 2400ANSI流明, 激光光源, 投射比 0.25:1', 'NORMAL'),
-('蓝光播放器', 'OPPO UDP-203', 'PLAYER', '2022-11-08', '客厅设备柜', '4K UHD蓝光播放, HDR10+, Dolby Vision, SACD播放', 'NORMAL'),
-('多声道功放', 'Denon AVR-X6700H', 'AMPLIFIER', '2023-01-10', '客厅设备柜', '11.2声道, 每声道140W, 8K HDMI, Dolby Atmos, DTS:X', 'NORMAL'),
-('环绕音响组', 'KEF Q50a', 'SPEAKER', '2023-05-22', '客厅侧墙', 'Dolby Atmos Enabled, 频响 80Hz-40kHz, 100W', 'MAINTENANCE'),
-('卧室便携投影', 'Anker Nebula Capsule II', 'PROJECTOR', '2024-02-14', '卧室床头柜', '720p分辨率, 200ANSI流明, 内置Android TV', 'FAULTY'),
-('流媒体播放器', 'Apple TV 4K', 'PLAYER', '2023-09-30', '客厅设备柜', 'A15芯片, 64GB存储, HDMI 2.1, Wi-Fi 6, Thread', 'NORMAL'),
-('书架音响系统', 'Sonos Five', 'SPEAKER', '2024-01-05', '书房', '六驱动器, 三高音, 三中频, Wi-Fi, AirPlay 2', 'NORMAL');
+INSERT INTO device (name, model, device_type, purchase_date, location, hardware_specs, status, lamp_install_date, lamp_replace_hours) VALUES
+('家庭影院主音响', 'Bose 901 Series VI', 'SPEAKER', '2023-03-15', '客厅电视墙', '频响范围 20Hz-20kHz, 功率 400W, 阻抗 8Ω', 'NORMAL', NULL, NULL),
+('4K激光投影仪', 'XGIMI Aura 4K', 'PROJECTOR', '2023-06-20', '客厅吊顶', '4K UHD分辨率, 2400ANSI流明, 激光光源, 投射比 0.25:1', 'NORMAL', '2023-06-20', 20000),
+('蓝光播放器', 'OPPO UDP-203', 'PLAYER', '2022-11-08', '客厅设备柜', '4K UHD蓝光播放, HDR10+, Dolby Vision, SACD播放', 'NORMAL', NULL, NULL),
+('多声道功放', 'Denon AVR-X6700H', 'AMPLIFIER', '2023-01-10', '客厅设备柜', '11.2声道, 每声道140W, 8K HDMI, Dolby Atmos, DTS:X', 'NORMAL', NULL, NULL),
+('环绕音响组', 'KEF Q50a', 'SPEAKER', '2023-05-22', '客厅侧墙', 'Dolby Atmos Enabled, 频响 80Hz-40kHz, 100W', 'MAINTENANCE', NULL, NULL),
+('卧室便携投影', 'Anker Nebula Capsule II', 'PROJECTOR', '2024-02-14', '卧室床头柜', '720p分辨率, 200ANSI流明, 内置Android TV', 'FAULTY', '2024-02-14', 30000),
+('流媒体播放器', 'Apple TV 4K', 'PLAYER', '2023-09-30', '客厅设备柜', 'A15芯片, 64GB存储, HDMI 2.1, Wi-Fi 6, Thread', 'NORMAL', NULL, NULL),
+('书架音响系统', 'Sonos Five', 'SPEAKER', '2024-01-05', '书房', '六驱动器, 三高音, 三中频, Wi-Fi, AirPlay 2', 'NORMAL', NULL, NULL);
 
 -- 预置使用记录
 INSERT INTO usage_record (device_id, usage_date, duration_minutes, scenario, remark) VALUES

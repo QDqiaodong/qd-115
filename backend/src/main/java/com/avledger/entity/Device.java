@@ -48,6 +48,10 @@ public class Device {
     @Column(nullable = false, length = 20)
     private DeviceStatus status = DeviceStatus.NORMAL;
 
+    private LocalDate lampInstallDate;
+
+    private Integer lampReplaceHours;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

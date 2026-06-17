@@ -85,6 +85,8 @@ public class DeviceService {
             existing.setLocation(device.getLocation());
             existing.setHardwareSpecs(device.getHardwareSpecs());
             existing.setStatus(device.getStatus());
+            existing.setLampInstallDate(device.getLampInstallDate());
+            existing.setLampReplaceHours(device.getLampReplaceHours());
             return deviceRepository.save(existing);
         });
     }
@@ -129,6 +131,12 @@ public class DeviceService {
             }
             if (device.getHardwareSpecs() != null) {
                 existing.setHardwareSpecs(device.getHardwareSpecs());
+            }
+            if (device.getLampInstallDate() != null) {
+                existing.setLampInstallDate(device.getLampInstallDate());
+            }
+            if (device.getLampReplaceHours() != null) {
+                existing.setLampReplaceHours(device.getLampReplaceHours());
             }
             result.add(deviceRepository.save(existing));
         }

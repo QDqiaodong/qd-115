@@ -103,6 +103,38 @@
               <el-icon :size="11" :color="getNextWindowSummary(device).overdue ? '#F56C6C' : '#E6A23C'"><Warning /></el-icon>
               <span>{{ getNextWindowSummary(device).overdue ? '逾期' + Math.abs(getNextWindowSummary(device).daysUntil) + '天' : '下次保养 ' + getNextWindowSummary(device).daysUntil + '天' }}</span>
             </div>
+            <div v-if="device.lampLife?.available && device.lampLife.status !== 'UNSET'" class="tile-lamp-life">
+              <el-tooltip placement="top" :show-after="300">
+                <template #content>
+                  <div class="lamp-tooltip">
+                    <div class="lamp-tooltip-title">灯泡寿命详情</div>
+                    <div class="lamp-tooltip-row">
+                      <span>安装日期</span>
+                      <span>{{ device.lampLife.lampInstallDate || '-' }}</span>
+                    </div>
+                    <div class="lamp-tooltip-row">
+                      <span>累计使用</span>
+                      <span>{{ device.lampLife.usedHours }} 小时</span>
+                    </div>
+                    <div class="lamp-tooltip-row">
+                      <span>更换阈值</span>
+                      <span>{{ device.lampLife.lampReplaceHours }} 小时</span>
+                    </div>
+                    <div class="lamp-tooltip-row">
+                      <span>剩余寿命</span>
+                      <span>{{ device.lampLife.remainingHours }} 小时</span>
+                    </div>
+                  </div>
+                </template>
+                <div class="lamp-bar-wrapper">
+                  <span class="lamp-icon">💡</span>
+                  <div class="lamp-bar-track">
+                    <div class="lamp-bar-fill" :style="{ width: device.lampLife.usedPercent + '%', background: lampColor(device.lampLife.status) }"></div>
+                  </div>
+                  <span class="lamp-remaining" :style="{ color: lampColor(device.lampLife.status) }">{{ device.lampLife.remainingHours }}h</span>
+                </div>
+              </el-tooltip>
+            </div>
           </div>
           <el-empty v-if="group.devices.length === 0" description="暂无设备" :image-size="60" />
         </div>
@@ -151,6 +183,11 @@ const healthColor = (score) => {
   if (score >= 60) return '#E6A23C'
   if (score >= 40) return '#F56C6C'
   return '#C45656'
+}
+
+const lampColor = (status) => {
+  const map = { NORMAL: '#67C23A', CAUTION: '#E6A23C', WARNING: '#F56C6C', EXPIRED: '#C45656' }
+  return map[status] || '#909399'
 }
 
 const formatTime = (str) => {
@@ -446,6 +483,53 @@ onMounted(fetchData)
   padding-bottom: 4px;
 }
 .health-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tile-lamp-life {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f2f3f5;
+}
+.lamp-bar-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.lamp-icon {
+  font-size: 14px;
+}
+.lamp-bar-track {
+  flex: 1;
+  height: 8px;
+  background: #ebeef5;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.lamp-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease, background 0.4s ease;
+}
+.lamp-remaining {
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 42px;
+  text-align: right;
+}
+.lamp-tooltip {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.lamp-tooltip-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  padding-bottom: 4px;
+}
+.lamp-tooltip-row {
   display: flex;
   justify-content: space-between;
   gap: 16px;

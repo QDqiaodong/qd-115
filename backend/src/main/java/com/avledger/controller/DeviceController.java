@@ -11,6 +11,7 @@ import com.avledger.repository.MaintenanceRecordRepository;
 import com.avledger.repository.RepairRecordRepository;
 import com.avledger.service.DeviceService;
 import com.avledger.service.HealthScoreService;
+import com.avledger.service.LampLifeService;
 import com.avledger.service.MaintenanceIntervalService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,7 @@ public class DeviceController {
     private final FirmwareRecordRepository firmwareRecordRepository;
     private final MaintenanceIntervalService maintenanceIntervalService;
     private final HealthScoreService healthScoreService;
+    private final LampLifeService lampLifeService;
 
     @GetMapping
     public ResponseEntity<List<Device>> findAll() {
@@ -136,6 +138,13 @@ public class DeviceController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/{id}/lamp-life")
+    public ResponseEntity<Map<String, Object>> getLampLife(@PathVariable Long id) {
+        return deviceService.findById(id)
+                .map(device -> ResponseEntity.ok(lampLifeService.getLampLifeInfo(device)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/status-wall")
     public ResponseEntity<List<Map<String, Object>>> getStatusWall() {
         List<Device> allDevices = deviceService.findAll();
@@ -182,6 +191,8 @@ public class DeviceController {
                 });
 
                 item.put("healthScore", healthScoreService.calculateHealthScore(d));
+
+                item.put("lampLife", lampLifeService.getLampLifeInfo(d));
 
                 deviceItems.add(item);
             }
