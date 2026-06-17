@@ -1,7 +1,7 @@
 <template>
   <div class="maintenance-record">
     <div class="top-bar">
-      <el-select v-model="selectedDeviceId" placeholder="选择设备" clearable filterable style="width: 240px" @change="fetchData">
+      <el-select v-model="selectedDeviceId" placeholder="选择设备（留空查看全部）" clearable filterable style="width: 240px" @change="onDeviceChange">
         <el-option v-for="d in deviceList" :key="d.id" :label="d.name" :value="d.id" />
       </el-select>
       <div style="flex: 1" />
@@ -104,7 +104,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Warning } from '@element-plus/icons-vue'
-import { getDevices, getMaintenanceByDevice, createMaintenance, updateMaintenance, deleteMaintenance } from '../api'
+import { getDevices, getAllMaintenance, createMaintenance, updateMaintenance, deleteMaintenance } from '../api'
 import { calculateNextWindows, getEarliestUrgentWindow } from '../utils/maintenanceInterval'
 
 const deviceList = ref([])
@@ -163,14 +163,16 @@ const fetchDevices = async () => {
   }
 }
 
+const onDeviceChange = () => {
+  activeType.value = ''
+  fetchData()
+}
+
 const fetchData = async () => {
-  if (!selectedDeviceId.value) {
-    maintenanceList.value = []
-    return
-  }
   loading.value = true
   try {
-    const res = await getMaintenanceByDevice(selectedDeviceId.value)
+    const deviceId = selectedDeviceId.value || undefined
+    const res = await getAllMaintenance(deviceId)
     maintenanceList.value = Array.isArray(res) ? res : []
   } catch (e) {
     ElMessage.error('获取养护记录失败')
@@ -264,6 +266,7 @@ const handleDelete = async (row) => {
 
 onMounted(async () => {
   await fetchDevices()
+  fetchData()
 })
 </script>
 

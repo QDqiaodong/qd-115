@@ -26,9 +26,19 @@ public class UsageRecordController {
         return ResponseEntity.ok(usageRecordService.findByDeviceId(deviceId));
     }
 
+    @GetMapping
+    public ResponseEntity<List<UsageRecord>> findAll(@RequestParam(required = false) Long deviceId) {
+        return ResponseEntity.ok(usageRecordService.findAll(deviceId));
+    }
+
     @GetMapping("/device/{deviceId}/stats")
     public ResponseEntity<Map<String, Object>> getStats(@PathVariable Long deviceId) {
         return ResponseEntity.ok(usageRecordService.getUsageStatsByDevice(deviceId));
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getStatsOptional(@RequestParam(required = false) Long deviceId) {
+        return ResponseEntity.ok(usageRecordService.getUsageStats(deviceId));
     }
 
     @GetMapping("/heatmap")

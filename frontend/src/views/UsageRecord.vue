@@ -135,7 +135,7 @@
 import { ref, reactive, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { getDevices, getUsageByDevice, createUsage, updateUsage, deleteUsage, getUsageStats, getUsageSceneDistribution, getUsageLocations } from '../api'
+import { getDevices, getAllUsage, createUsage, updateUsage, deleteUsage, getAllUsageStats, getUsageSceneDistribution, getUsageLocations } from '../api'
 import UsageHeatmap from '../components/UsageHeatmap.vue'
 import * as echarts from 'echarts'
 
@@ -278,18 +278,12 @@ const fetchDevices = async () => {
 }
 
 const fetchData = async () => {
-  if (!selectedDeviceId.value) {
-    usageList.value = []
-    stats.totalDuration = '0时0分'
-    stats.monthDuration = '0时0分'
-    stats.avgDuration = '0分'
-    return
-  }
   loading.value = true
   try {
+    const deviceId = selectedDeviceId.value || undefined
     const [usageRes, statsRes] = await Promise.all([
-      getUsageByDevice(selectedDeviceId.value),
-      getUsageStats(selectedDeviceId.value).catch(() => null)
+      getAllUsage(deviceId),
+      getAllUsageStats(deviceId).catch(() => null)
     ])
     usageList.value = Array.isArray(usageRes) ? usageRes : []
     if (statsRes) {
@@ -381,6 +375,7 @@ onMounted(async () => {
   await fetchLocations()
   await nextTick()
   initChart()
+  fetchData()
   fetchSceneDistribution()
   window.addEventListener('resize', handleResize)
 })

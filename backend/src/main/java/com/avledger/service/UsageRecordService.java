@@ -28,12 +28,32 @@ public class UsageRecordService {
         return usageRecordRepository.findByDeviceIdOrderByUsageDateDesc(deviceId);
     }
 
+    public List<UsageRecord> findAll(Long deviceId) {
+        return usageRecordRepository.findAllByDeviceIdOptional(deviceId);
+    }
+
     public Map<String, Object> getUsageStatsByDevice(Long deviceId) {
         Map<String, Object> stats = new HashMap<>();
         Integer total = usageRecordRepository.sumDurationByDeviceId(deviceId);
         Long count = usageRecordRepository.countByDeviceId(deviceId);
         LocalDate monthStart = LocalDate.now().withDayOfMonth(1);
         Integer monthly = usageRecordRepository.sumDurationByDeviceIdAndDateAfter(deviceId, monthStart);
+
+        stats.put("totalMinutes", total != null ? total : 0);
+        stats.put("totalHours", total != null ? Math.round(total / 60.0 * 10) / 10.0 : 0.0);
+        stats.put("monthlyMinutes", monthly != null ? monthly : 0);
+        stats.put("monthlyHours", monthly != null ? Math.round(monthly / 60.0 * 10) / 10.0 : 0.0);
+        stats.put("count", count != null ? count : 0L);
+        stats.put("avgMinutes", count != null && count > 0 ? Math.round((total != null ? total : 0) * 10.0 / count) / 10.0 : 0.0);
+        return stats;
+    }
+
+    public Map<String, Object> getUsageStats(Long deviceId) {
+        Map<String, Object> stats = new HashMap<>();
+        Integer total = usageRecordRepository.sumDurationByDeviceIdOptional(deviceId);
+        Long count = usageRecordRepository.countByDeviceIdOptional(deviceId);
+        LocalDate monthStart = LocalDate.now().withDayOfMonth(1);
+        Integer monthly = usageRecordRepository.sumDurationByDeviceIdAndDateAfterOptional(deviceId, monthStart);
 
         stats.put("totalMinutes", total != null ? total : 0);
         stats.put("totalHours", total != null ? Math.round(total / 60.0 * 10) / 10.0 : 0.0);

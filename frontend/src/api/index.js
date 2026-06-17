@@ -35,10 +35,22 @@ export const getHealthScore = (id) => request.get(`/devices/health-score/${id}`)
 export const getLampLife = (id) => request.get(`/devices/${id}/lamp-life`)
 
 export const getUsageByDevice = (deviceId) => request.get(`/usage/device/${deviceId}`)
+export const getAllUsage = (deviceId) => {
+  const params = new URLSearchParams()
+  if (deviceId) params.append('deviceId', deviceId)
+  const query = params.toString()
+  return request.get(`/usage${query ? '?' + query : ''}`)
+}
 export const createUsage = (data) => request.post('/usage', data)
 export const updateUsage = (id, data) => request.put(`/usage/${id}`, data)
 export const deleteUsage = (id) => request.delete(`/usage/${id}`)
 export const getUsageStats = (deviceId) => request.get(`/usage/device/${deviceId}/stats`)
+export const getAllUsageStats = (deviceId) => {
+  const params = new URLSearchParams()
+  if (deviceId) params.append('deviceId', deviceId)
+  const query = params.toString()
+  return request.get(`/usage/stats${query ? '?' + query : ''}`)
+}
 export const getUsageHeatmap = (deviceId, startDate, endDate) => {
   const params = new URLSearchParams()
   if (deviceId) params.append('deviceId', deviceId)
@@ -68,6 +80,12 @@ export const updateRepair = (id, data) => request.put(`/repair/${id}`, data)
 export const deleteRepair = (id) => request.delete(`/repair/${id}`)
 
 export const getMaintenanceByDevice = (deviceId) => request.get(`/maintenance/device/${deviceId}`)
+export const getAllMaintenance = (deviceId) => {
+  const params = new URLSearchParams()
+  if (deviceId) params.append('deviceId', deviceId)
+  const query = params.toString()
+  return request.get(`/maintenance${query ? '?' + query : ''}`)
+}
 export const createMaintenance = (data) => request.post('/maintenance', data)
 export const updateMaintenance = (id, data) => request.put(`/maintenance/${id}`, data)
 export const deleteMaintenance = (id) => request.delete(`/maintenance/${id}`)

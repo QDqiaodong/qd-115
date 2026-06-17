@@ -26,6 +26,10 @@ public class MaintenanceRecordService {
         return maintenanceRecordRepository.findByDeviceIdOrderByMaintenanceTimeDesc(deviceId);
     }
 
+    public List<MaintenanceRecord> findAll(Long deviceId) {
+        return maintenanceRecordRepository.findAllByDeviceIdOptional(deviceId);
+    }
+
     @Cacheable(value = "maintenanceCycles", key = "#type")
     public List<MaintenanceRecord> findByType(MaintenanceType type) {
         return maintenanceRecordRepository.findByMaintenanceType(type);

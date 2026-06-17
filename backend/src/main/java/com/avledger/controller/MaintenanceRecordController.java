@@ -24,6 +24,11 @@ public class MaintenanceRecordController {
         return ResponseEntity.ok(maintenanceRecordService.findByDeviceId(deviceId));
     }
 
+    @GetMapping
+    public ResponseEntity<List<MaintenanceRecord>> findAll(@RequestParam(required = false) Long deviceId) {
+        return ResponseEntity.ok(maintenanceRecordService.findAll(deviceId));
+    }
+
     @GetMapping("/type/{type}")
     public ResponseEntity<List<MaintenanceRecord>> findByType(@PathVariable MaintenanceType type) {
         return ResponseEntity.ok(maintenanceRecordService.findByType(type));
