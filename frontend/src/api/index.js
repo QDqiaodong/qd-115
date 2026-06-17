@@ -61,6 +61,8 @@ export const getUsageSceneDistribution = (deviceType, location) => {
 export const getUsageLocations = () => request.get('/usage/locations')
 
 export const getRepairByDevice = (deviceId) => request.get(`/repair/device/${deviceId}`)
+export const getRepairTimeline = (deviceId) => request.get(`/repair/timeline/${deviceId}`)
+export const getRepairCostStatistics = (params) => request.get('/repair/cost-statistics', { params })
 export const createRepair = (data) => request.post('/repair', data)
 export const updateRepair = (id, data) => request.put(`/repair/${id}`, data)
 export const deleteRepair = (id) => request.delete(`/repair/${id}`)

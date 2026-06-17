@@ -37,6 +37,10 @@
           <el-icon><Tools /></el-icon>
           <span>养护记录</span>
         </el-menu-item>
+        <el-menu-item index="/cost-statistics">
+          <el-icon><TrendCharts /></el-icon>
+          <span>费用统计</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>
@@ -48,7 +52,7 @@
 </template>
 
 <script setup>
-import { Monitor, Timer, Warning, Tools, Location, DataBoard } from '@element-plus/icons-vue'
+import { Monitor, Timer, Warning, Tools, Location, DataBoard, TrendCharts } from '@element-plus/icons-vue'
 </script>
 
 <style scoped>

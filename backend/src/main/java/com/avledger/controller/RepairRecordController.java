@@ -1,6 +1,7 @@
 package com.avledger.controller;
 
 import com.avledger.entity.RepairRecord;
+import com.avledger.enums.DeviceType;
 import com.avledger.service.RepairRecordService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,21 @@ public class RepairRecordController {
     @GetMapping("/recent")
     public ResponseEntity<List<RepairRecord>> getRecent() {
         return ResponseEntity.ok(repairRecordService.getRecentRepairs());
+    }
+
+    @GetMapping("/timeline/{deviceId}")
+    public ResponseEntity<List<Map<String, Object>>> getTimeline(@PathVariable Long deviceId) {
+        return ResponseEntity.ok(repairRecordService.getRepairTimeline(deviceId));
+    }
+
+    @GetMapping("/cost-statistics")
+    public ResponseEntity<Map<String, Object>> getCostStatistics(
+            @RequestParam(required = false) DeviceType deviceType,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) String yearMonth,
+            @RequestParam(required = false) String cause
+    ) {
+        return ResponseEntity.ok(repairRecordService.getCostStatistics(deviceType, location, yearMonth, cause));
     }
 
     @PostMapping

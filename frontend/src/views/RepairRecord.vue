@@ -6,34 +6,43 @@
       </el-select>
       <el-tag v-if="currentDeviceStatus" :type="statusTagType(currentDeviceStatus)" size="large" effect="dark">当前状态：{{ statusLabel(currentDeviceStatus) }}</el-tag>
       <div style="flex: 1" />
+      <el-button :type="viewMode === 'table' ? 'primary' : ''" @click="viewMode = 'table'">列表视图</el-button>
+      <el-button :type="viewMode === 'timeline' ? 'primary' : ''" @click="viewMode = 'timeline'">诊断时间轴</el-button>
       <el-button type="primary" :icon="Plus" @click="openForm" :disabled="!selectedDeviceId">新增检修记录</el-button>
     </div>
 
-    <el-card shadow="never">
-      <el-table :data="repairList" v-loading="loading" stripe border>
-        <el-table-column prop="repairTime" label="检修时间" width="180" fixed="left" />
-        <el-table-column label="设备名称" width="140" fixed="left">
-          <template #default="{ row }">{{ row.device?.name }}</template>
-        </el-table-column>
-        <el-table-column prop="symptom" label="异常现象" show-overflow-tooltip min-width="180" />
-        <el-table-column label="维修详情" align="center">
-          <el-table-column prop="cause" label="故障原因" show-overflow-tooltip min-width="150" />
-          <el-table-column prop="fixMethod" label="修复方式" show-overflow-tooltip min-width="150" />
-          <el-table-column prop="repairPerson" label="维修人员" width="100" />
-          <el-table-column label="费用" width="120" align="right">
+    <template v-if="viewMode === 'table'">
+      <el-card shadow="never">
+        <el-table :data="repairList" v-loading="loading" stripe border>
+          <el-table-column prop="repairTime" label="检修时间" width="180" fixed="left" />
+          <el-table-column label="设备名称" width="140" fixed="left">
+            <template #default="{ row }">{{ row.device?.name }}</template>
+          </el-table-column>
+          <el-table-column prop="symptom" label="异常现象" show-overflow-tooltip min-width="180" />
+          <el-table-column label="维修详情" align="center">
+            <el-table-column prop="cause" label="故障原因" show-overflow-tooltip min-width="150" />
+            <el-table-column prop="fixMethod" label="修复方式" show-overflow-tooltip min-width="150" />
+            <el-table-column prop="repairPerson" label="维修人员" width="100" />
+            <el-table-column label="费用" width="120" align="right">
+              <template #default="{ row }">
+                <span class="cost-amount">¥{{ row.cost != null ? Number(row.cost).toFixed(2) : '0.00' }}</span>
+              </template>
+            </el-table-column>
+          </el-table-column>
+          <el-table-column label="操作" width="140" fixed="right">
             <template #default="{ row }">
-              <span class="cost-amount">¥{{ row.cost != null ? Number(row.cost).toFixed(2) : '0.00' }}</span>
+              <el-button type="primary" link size="small" @click="openForm(row)">编辑</el-button>
+              <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
             </template>
           </el-table-column>
-        </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="openForm(row)">编辑</el-button>
-            <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+        </el-table>
+      </el-card>
+    </template>
+    <template v-else>
+      <el-card shadow="never">
+        <RepairTimeline :device-id="selectedDeviceId" />
+      </el-card>
+    </template>
 
     <el-dialog v-model="formVisible" :title="formMode === 'create' ? '新增检修记录' : '编辑检修记录'" width="600px" destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px">
@@ -77,11 +86,13 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getDevices, getRepairByDevice, createRepair, updateRepair, deleteRepair } from '../api'
+import RepairTimeline from '../components/RepairTimeline.vue'
 
 const deviceList = ref([])
 const selectedDeviceId = ref('')
 const repairList = ref([])
 const loading = ref(false)
+const viewMode = ref('table')
 
 const currentDeviceStatus = computed(() => {
   const d = deviceList.value.find(item => item.id === selectedDeviceId.value)
