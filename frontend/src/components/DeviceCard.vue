@@ -22,6 +22,38 @@
         <p><span class="label">位置：</span>{{ device.location || '-' }}</p>
         <p v-if="device.hardwareSpecs"><span class="label">规格：</span>{{ device.hardwareSpecs }}</p>
       </div>
+      <div v-if="device.healthScore" class="health-score-section">
+        <el-tooltip placement="top" :show-after="300">
+          <template #content>
+            <div class="health-tooltip">
+              <div class="health-tooltip-title">健康评分明细</div>
+              <div class="health-tooltip-row">
+                <span>设备状态</span>
+                <span>{{ device.healthScore.details.statusScore }} 分</span>
+              </div>
+              <div class="health-tooltip-row">
+                <span>维修次数</span>
+                <span>{{ device.healthScore.details.repairScore }} 分（共 {{ device.healthScore.details.repairDetail?.repairCount ?? 0 }} 次）</span>
+              </div>
+              <div class="health-tooltip-row">
+                <span>保养及时</span>
+                <span>{{ device.healthScore.details.maintenanceScore }} 分</span>
+              </div>
+              <div class="health-tooltip-row">
+                <span>使用负荷</span>
+                <span>{{ device.healthScore.details.usageScore }} 分（日均 {{ device.healthScore.details.usageDetail?.avgHoursPerDay ?? 0 }}h）</span>
+              </div>
+            </div>
+          </template>
+          <div class="health-bar-wrapper">
+            <span class="health-score-num" :style="{ color: healthColor(device.healthScore.score) }">{{ device.healthScore.score }}</span>
+            <div class="health-bar-track">
+              <div class="health-bar-fill" :style="{ width: device.healthScore.score + '%', background: healthColor(device.healthScore.score) }"></div>
+            </div>
+            <span class="health-level-tag" :style="{ color: healthColor(device.healthScore.score), borderColor: healthColor(device.healthScore.score) }">{{ device.healthScore.level }}</span>
+          </div>
+        </el-tooltip>
+      </div>
     </div>
     <div class="card-actions">
       <el-button type="primary" link size="small" @click="$emit('edit', device)">编辑</el-button>
@@ -46,7 +78,7 @@ defineEmits(['edit', 'delete', 'detail'])
 const hovered = ref(false)
 
 const typeMap = { SPEAKER: '音响', PROJECTOR: '投影仪', PLAYER: '播放器', AMPLIFIER: '功放' }
-const statusMap = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '维修中', RETIRED: '退役' }
+const statusMap = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '保养中', RETIRED: '退役' }
 
 const typeIcon = computed(() => {
   const map = { SPEAKER: Headset, PROJECTOR: Monitor, PLAYER: VideoPlay, AMPLIFIER: Microphone }
@@ -67,6 +99,14 @@ const maintenanceIndicator = computed(() => {
   const windows = calculateNextWindows(props.device.deviceType, props.lastMaintenanceTime)
   return getEarliestUrgentWindow(windows)
 })
+
+const healthColor = (score) => {
+  if (score >= 90) return '#67C23A'
+  if (score >= 75) return '#409EFF'
+  if (score >= 60) return '#E6A23C'
+  if (score >= 40) return '#F56C6C'
+  return '#C45656'
+}
 </script>
 
 <style scoped>
@@ -142,5 +182,56 @@ const maintenanceIndicator = computed(() => {
   gap: 4px;
   border-top: 1px solid #ebeef5;
   padding-top: 10px;
+}
+.health-score-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f2f3f5;
+}
+.health-bar-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.health-score-num {
+  font-size: 16px;
+  font-weight: 700;
+  min-width: 28px;
+  text-align: right;
+}
+.health-bar-track {
+  flex: 1;
+  height: 8px;
+  background: #ebeef5;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.health-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease, background 0.4s ease;
+}
+.health-level-tag {
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid;
+  border-radius: 3px;
+  padding: 1px 4px;
+  white-space: nowrap;
+}
+.health-tooltip {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.health-tooltip-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  padding-bottom: 4px;
+}
+.health-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
 }
 </style>

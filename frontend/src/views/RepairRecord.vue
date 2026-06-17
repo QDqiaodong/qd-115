@@ -88,7 +88,7 @@ const currentDeviceStatus = computed(() => {
   return d?.status || ''
 })
 
-const statusMap = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '维修中', RETIRED: '退役' }
+const statusMap = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '保养中', RETIRED: '退役' }
 
 const statusLabel = (s) => statusMap[s] || s
 

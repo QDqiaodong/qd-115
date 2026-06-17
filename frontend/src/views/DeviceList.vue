@@ -17,7 +17,7 @@
       <el-select v-model="filterStatus" placeholder="设备状态" clearable style="width: 140px">
         <el-option label="正常" value="NORMAL" />
         <el-option label="故障" value="FAULTY" />
-        <el-option label="维修中" value="MAINTENANCE" />
+        <el-option label="保养中" value="MAINTENANCE" />
         <el-option label="退役" value="RETIRED" />
       </el-select>
       <div style="flex: 1" />
@@ -59,7 +59,7 @@
           <el-select v-model="form.status" placeholder="请选择状态" style="width: 100%">
             <el-option label="正常" value="NORMAL" :disabled="statusDisabled('NORMAL')" />
             <el-option label="故障" value="FAULTY" :disabled="statusDisabled('FAULTY')" />
-            <el-option label="维修中" value="MAINTENANCE" :disabled="statusDisabled('MAINTENANCE')" />
+            <el-option label="保养中" value="MAINTENANCE" :disabled="statusDisabled('MAINTENANCE')" />
             <el-option label="退役" value="RETIRED" :disabled="statusDisabled('RETIRED')" />
           </el-select>
           <div v-if="formMode === 'edit' && form.originalStatus === 'RETIRED'" class="status-hint">
@@ -327,7 +327,7 @@ const filterStatus = ref('')
 const maintenanceSummaries = ref({})
 
 const typeMap = { SPEAKER: '音响', PROJECTOR: '投影仪', PLAYER: '播放器', AMPLIFIER: '功放' }
-const statusMap = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '维修中', RETIRED: '退役' }
+const statusMap = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '保养中', RETIRED: '退役' }
 const mtMap = { CLEANING: '机身清洁', CABLE: '线路整理', FIRMWARE: '固件升级', OTHER: '其他' }
 
 const formVisible = ref(false)

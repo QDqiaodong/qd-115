@@ -8,7 +8,7 @@
       <el-select v-model="batchStatus" placeholder="批量设置设备状态（留空不变）" style="width: 180px" clearable>
         <el-option label="正常" value="NORMAL" />
         <el-option label="故障" value="FAULTY" />
-        <el-option label="维修中" value="MAINTENANCE" />
+        <el-option label="保养中" value="MAINTENANCE" />
         <el-option label="退役" value="RETIRED" />
       </el-select>
       <el-button type="primary" :disabled="!canApply" @click="applyBatch">批量应用</el-button>
@@ -140,7 +140,7 @@ const previewVisible = ref(false)
 const hasAppliedChanges = ref(false)
 
 const typeMap = { SPEAKER: '音响', PROJECTOR: '投影仪', PLAYER: '播放器', AMPLIFIER: '功放' }
-const typeMapStatus = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '维修中', RETIRED: '退役' }
+const typeMapStatus = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '保养中', RETIRED: '退役' }
 const statusTypeMap = { NORMAL: 'success', FAULTY: 'danger', MAINTENANCE: 'warning', RETIRED: 'info' }
 
 const TRANSITION_RULES = {
