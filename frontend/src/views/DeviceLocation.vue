@@ -94,9 +94,9 @@
 <script setup>
 import { ref, computed, onMounted, h } from 'vue'
 import { ElMessage } from 'element-plus'
-import { House, OfficeBuilding, Reading, Film, Location } from '@element-plus/icons-vue'
 import { Headset, Monitor, VideoPlay, Microphone } from '@element-plus/icons-vue'
 import { getDevices } from '../api'
+import { normalizeLocation, getLocationIcon, groupDevicesByLocation, STANDARD_LOCATIONS } from '../utils/location'
 
 const MiniDeviceCard = {
   name: 'MiniDeviceCard',
@@ -152,8 +152,6 @@ const statusMap = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '保养中'
 const detailVisible = ref(false)
 const currentDevice = ref(null)
 
-const defaultLocations = ['客厅', '影音室', '卧室', '书房', '厨房']
-
 const filteredDevices = computed(() => {
   return devices.value.filter(d => {
     const matchStatus = !filterStatus.value || d.status === filterStatus.value
@@ -163,32 +161,7 @@ const filteredDevices = computed(() => {
 })
 
 const locationGroups = computed(() => {
-  const groups = {}
-  const unassigned = []
-
-  filteredDevices.value.forEach(device => {
-    const loc = device.location && device.location.trim() ? device.location.trim() : null
-    if (loc) {
-      if (!groups[loc]) groups[loc] = []
-      groups[loc].push(device)
-    } else {
-      unassigned.push(device)
-    }
-  })
-
-  if (unassigned.length > 0) {
-    groups['未分配位置'] = unassigned
-  }
-
-  const sorted = {}
-  const knownLocations = defaultLocations.filter(loc => groups[loc])
-  const otherLocations = Object.keys(groups).filter(loc => !defaultLocations.includes(loc) && loc !== '未分配位置')
-
-  knownLocations.forEach(loc => { sorted[loc] = groups[loc] })
-  otherLocations.sort().forEach(loc => { sorted[loc] = groups[loc] })
-  if (groups['未分配位置']) sorted['未分配位置'] = groups['未分配位置']
-
-  return sorted
+  return groupDevicesByLocation(filteredDevices.value)
 })
 
 const statusCount = computed(() => {
@@ -204,14 +177,7 @@ const getCountByStatus = (group, status) => {
 }
 
 const locationIcon = (location) => {
-  const iconMap = {
-    '客厅': House,
-    '影音室': Film,
-    '卧室': Reading,
-    '书房': Reading,
-    '厨房': OfficeBuilding
-  }
-  return iconMap[location] || Location
+  return getLocationIcon(location)
 }
 
 const statusTagType = (status) => {

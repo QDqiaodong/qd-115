@@ -22,6 +22,8 @@ request.interceptors.response.use(
 export const getDevices = () => request.get('/devices')
 export const getDevice = (id) => request.get(`/devices/${id}`)
 export const getDeviceMaintenanceSummaries = () => request.get('/devices/maintenance-summaries')
+export const getStandardLocations = () => request.get('/devices/locations/standard')
+export const getDeviceLocations = () => request.get('/devices/locations')
 export const createDevice = (data) => request.post('/devices', data)
 export const updateDevice = (id, data) => request.put(`/devices/${id}`, data)
 export const deleteDevice = (id) => request.delete(`/devices/${id}`)

@@ -4,7 +4,9 @@
       勾选需要修改的设备，统一设置「摆放位置」和「设备状态」，未选择的字段将保持原值。
     </el-alert>
     <div class="batch-fields" style="margin-bottom: 16px; display: flex; gap: 12px;">
-      <el-input v-model="batchLocation" placeholder="批量设置摆放位置（留空不变）" style="flex: 1" clearable />
+      <el-select v-model="batchLocation" placeholder="批量设置摆放位置（留空不变）" style="flex: 1" clearable filterable allow-create default-first-option>
+        <el-option v-for="loc in locationOptions" :key="loc" :label="loc" :value="loc" />
+      </el-select>
       <el-select v-model="batchStatus" placeholder="批量设置设备状态（留空不变）" style="width: 180px" clearable>
         <el-option label="正常" value="NORMAL" />
         <el-option label="故障" value="FAULTY" />
@@ -119,9 +121,11 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ArrowRight, InfoFilled } from '@element-plus/icons-vue'
+import { STANDARD_LOCATIONS } from '../utils/location'
+import { getStandardLocations } from '../api'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -138,6 +142,20 @@ const localDevices = ref([])
 const originalDevices = ref([])
 const previewVisible = ref(false)
 const hasAppliedChanges = ref(false)
+const locationOptions = ref([...STANDARD_LOCATIONS])
+
+const fetchStandardLocations = async () => {
+  try {
+    const res = await getStandardLocations()
+    if (Array.isArray(res) && res.length > 0) {
+      locationOptions.value = res
+    }
+  } catch (e) {
+    locationOptions.value = [...STANDARD_LOCATIONS]
+  }
+}
+
+onMounted(fetchStandardLocations)
 
 const typeMap = { SPEAKER: '音响', PROJECTOR: '投影仪', PLAYER: '播放器', AMPLIFIER: '功放' }
 const typeMapStatus = { NORMAL: '正常', FAULTY: '故障', MAINTENANCE: '保养中', RETIRED: '退役' }

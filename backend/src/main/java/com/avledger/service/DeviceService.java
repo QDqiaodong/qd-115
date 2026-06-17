@@ -4,6 +4,7 @@ import com.avledger.entity.Device;
 import com.avledger.enums.DeviceStatus;
 import com.avledger.enums.DeviceType;
 import com.avledger.repository.DeviceRepository;
+import com.avledger.util.LocationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -68,6 +69,9 @@ public class DeviceService {
     @CacheEvict(value = {"devices", "deviceCategories"}, allEntries = true)
     @Transactional
     public Device save(Device device) {
+        if (device.getLocation() != null) {
+            device.setLocation(LocationUtils.normalizeLocation(device.getLocation()));
+        }
         return deviceRepository.save(device);
     }
 
@@ -82,7 +86,9 @@ public class DeviceService {
             existing.setModel(device.getModel());
             existing.setDeviceType(device.getDeviceType());
             existing.setPurchaseDate(device.getPurchaseDate());
-            existing.setLocation(device.getLocation());
+            if (device.getLocation() != null) {
+                existing.setLocation(LocationUtils.normalizeLocation(device.getLocation()));
+            }
             existing.setHardwareSpecs(device.getHardwareSpecs());
             existing.setStatus(device.getStatus());
             existing.setLampInstallDate(device.getLampInstallDate());
@@ -127,7 +133,7 @@ public class DeviceService {
                 existing.setPurchaseDate(device.getPurchaseDate());
             }
             if (device.getLocation() != null) {
-                existing.setLocation(device.getLocation());
+                existing.setLocation(LocationUtils.normalizeLocation(device.getLocation()));
             }
             if (device.getHardwareSpecs() != null) {
                 existing.setHardwareSpecs(device.getHardwareSpecs());

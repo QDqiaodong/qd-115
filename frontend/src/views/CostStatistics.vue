@@ -99,6 +99,7 @@ import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getRepairCostStatistics, getDevices } from '../api'
 import * as echarts from 'echarts'
+import { normalizeLocation, sortLocations, getNormalizedLocationList } from '../utils/location'
 
 const filters = ref({
   deviceType: '',
@@ -131,8 +132,7 @@ const fetchLocations = async () => {
   try {
     const res = await getDevices()
     const devices = Array.isArray(res) ? res : []
-    const locs = [...new Set(devices.map(d => d.location).filter(Boolean))]
-    locationList.value = locs
+    locationList.value = getNormalizedLocationList(devices)
   } catch (e) { /* ignore */ }
 }
 

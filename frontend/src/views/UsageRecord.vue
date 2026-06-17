@@ -138,6 +138,7 @@ import { Plus } from '@element-plus/icons-vue'
 import { getDevices, getAllUsage, createUsage, updateUsage, deleteUsage, getAllUsageStats, getUsageSceneDistribution, getUsageLocations } from '../api'
 import UsageHeatmap from '../components/UsageHeatmap.vue'
 import * as echarts from 'echarts'
+import { normalizeLocation, sortLocations } from '../utils/location'
 
 const deviceList = ref([])
 const selectedDeviceId = ref('')
@@ -262,7 +263,9 @@ const fetchSceneDistribution = async () => {
 const fetchLocations = async () => {
   try {
     const res = await getUsageLocations()
-    locationList.value = Array.isArray(res) ? res : []
+    const locations = Array.isArray(res) ? res : []
+    const normalized = [...new Set(locations.map(loc => normalizeLocation(loc)).filter(Boolean))]
+    locationList.value = sortLocations(normalized)
   } catch (e) {
     locationList.value = []
   }

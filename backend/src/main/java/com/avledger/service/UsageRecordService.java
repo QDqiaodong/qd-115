@@ -6,6 +6,7 @@ import com.avledger.enums.DeviceStatus;
 import com.avledger.enums.DeviceType;
 import com.avledger.repository.DeviceRepository;
 import com.avledger.repository.UsageRecordRepository;
+import com.avledger.util.LocationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -134,23 +135,60 @@ public class UsageRecordService {
     }
 
     public List<Map<String, Object>> getSceneDistribution(DeviceType deviceType, String location) {
-        List<Object[]> rawData = usageRecordRepository.sumDurationByScene(deviceType, location);
+        String normalizedLocation = (location != null && !location.isBlank()) 
+            ? LocationUtils.normalizeLocation(location) 
+            : null;
+        List<Object[]> rawData = usageRecordRepository.sumDurationByScene(deviceType, normalizedLocation);
+        
+        Map<String, Integer> scenarioMap = new HashMap<>();
         int totalMinutes = 0;
+        
+        if (normalizedLocation != null) {
+            List<Device> allDevices = deviceRepository.findAll();
+            List<Long> matchingDeviceIds = allDevices.stream()
+                .filter(d -> d.getLocation() != null && !d.getLocation().isBlank())
+                .filter(d -> LocationUtils.normalizeLocation(d.getLocation()).equals(normalizedLocation))
+                .filter(d -> deviceType == null || d.getDeviceType() == deviceType)
+                .map(Device::getId)
+                .collect(java.util.stream.Collectors.toList());
+            
+            if (!matchingDeviceIds.isEmpty()) {
+                for (Long deviceId : matchingDeviceIds) {
+                    List<UsageRecord> records = usageRecordRepository.findByDeviceIdOrderByUsageDateDesc(deviceId);
+                    for (UsageRecord record : records) {
+                        String scenario = record.getScenario() != null ? record.getScenario() : "未分类";
+                        int minutes = record.getDurationMinutes() != null ? record.getDurationMinutes() : 0;
+                        scenarioMap.put(scenario, scenarioMap.getOrDefault(scenario, 0) + minutes);
+                        totalMinutes += minutes;
+                    }
+                }
+            }
+        } else {
+            for (Object[] row : rawData) {
+                String scenario = row[0] != null ? row[0].toString() : "未分类";
+                int minutes = ((Number) row[1]).intValue();
+                scenarioMap.put(scenario, minutes);
+                totalMinutes += minutes;
+            }
+        }
+        
         List<Map<String, Object>> items = new ArrayList<>();
-        for (Object[] row : rawData) {
-            String scenario = row[0] != null ? row[0].toString() : "未分类";
-            int minutes = ((Number) row[1]).intValue();
-            totalMinutes += minutes;
+        List<Map.Entry<String, Integer>> sortedEntries = new ArrayList<>(scenarioMap.entrySet());
+        sortedEntries.sort((a, b) -> b.getValue() - a.getValue());
+        
+        for (Map.Entry<String, Integer> entry : sortedEntries) {
             Map<String, Object> item = new HashMap<>();
-            item.put("scenario", scenario);
-            item.put("durationMinutes", minutes);
+            item.put("scenario", entry.getKey());
+            item.put("durationMinutes", entry.getValue());
             items.add(item);
         }
+        
         for (Map<String, Object> item : items) {
             int minutes = (int) item.get("durationMinutes");
             double percent = totalMinutes > 0 ? Math.round(minutes * 1000.0 / totalMinutes) / 10.0 : 0.0;
             item.put("percent", percent);
         }
+        
         Map<String, Object> result = new HashMap<>();
         result.put("totalMinutes", totalMinutes);
         result.put("items", items);
@@ -160,6 +198,7 @@ public class UsageRecordService {
     }
 
     public List<String> getDistinctLocations() {
-        return deviceRepository.findDistinctLocations();
+        List<String> locations = deviceRepository.findDistinctLocations();
+        return LocationUtils.getNormalizedLocationList(locations);
     }
 }

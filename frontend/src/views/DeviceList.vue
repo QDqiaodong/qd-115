@@ -70,7 +70,9 @@
           <el-date-picker v-model="form.purchaseDate" type="date" value-format="YYYY-MM-DD" placeholder="选择购入日期" style="width: 100%" />
         </el-form-item>
         <el-form-item label="存放位置" prop="location">
-          <el-input v-model="form.location" placeholder="请输入存放位置" />
+          <el-select v-model="form.location" placeholder="请选择存放位置" filterable allow-create default-first-option style="width: 100%">
+            <el-option v-for="loc in STANDARD_LOCATIONS" :key="loc" :label="loc" :value="loc" />
+          </el-select>
         </el-form-item>
         <el-form-item label="硬件规格" prop="hardwareSpecs">
           <el-input v-model="form.hardwareSpecs" type="textarea" :rows="3" placeholder="请输入硬件规格参数" />
@@ -319,6 +321,7 @@ import {
   getDeviceMaintenanceSummaries, getLampLife
 } from '../api'
 import { calculateNextWindows, getEarliestUrgentWindow } from '../utils/maintenanceInterval'
+import { STANDARD_LOCATIONS, normalizeLocation } from '../utils/location'
 
 const devices = ref([])
 const searchText = ref('')

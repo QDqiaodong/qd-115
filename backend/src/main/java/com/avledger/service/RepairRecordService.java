@@ -5,6 +5,7 @@ import com.avledger.entity.RepairRecord;
 import com.avledger.enums.DeviceType;
 import com.avledger.repository.DeviceRepository;
 import com.avledger.repository.RepairRecordRepository;
+import com.avledger.util.LocationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -96,7 +97,19 @@ public class RepairRecordService {
             startTime = ym.atDay(1).atStartOfDay();
             endTime = ym.atEndOfMonth().atTime(23, 59, 59);
         }
-        List<RepairRecord> records = repairRecordRepository.findByFilters(deviceType, location, startTime, endTime, cause);
+        
+        String normalizedLocation = (location != null && !location.isBlank()) 
+            ? LocationUtils.normalizeLocation(location) 
+            : null;
+            
+        List<RepairRecord> records = repairRecordRepository.findByFilters(deviceType, null, startTime, endTime, cause);
+        
+        if (normalizedLocation != null) {
+            records = records.stream()
+                .filter(r -> r.getDevice() != null && r.getDevice().getLocation() != null)
+                .filter(r -> LocationUtils.normalizeLocation(r.getDevice().getLocation()).equals(normalizedLocation))
+                .collect(Collectors.toList());
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
 
@@ -131,18 +144,47 @@ public class RepairRecordService {
         result.put("byDeviceType", byDeviceType);
 
         Map<String, Map<String, Object>> byLocation = new LinkedHashMap<>();
-        records.stream()
-                .collect(Collectors.groupingBy(r -> r.getDevice().getLocation() != null ? r.getDevice().getLocation() : "未知"))
-                .forEach((loc, recs) -> {
-                    Map<String, Object> stats = new LinkedHashMap<>();
-                    BigDecimal cost = recs.stream()
-                            .map(r -> r.getCost() != null ? r.getCost() : BigDecimal.ZERO)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    stats.put("totalCost", cost);
-                    stats.put("count", recs.size());
-                    stats.put("avgCost", cost.divide(BigDecimal.valueOf(recs.size()), 2, RoundingMode.HALF_UP));
-                    byLocation.put(loc, stats);
-                });
+        Map<String, List<RepairRecord>> locationGroups = records.stream()
+                .collect(Collectors.groupingBy(r -> {
+                    String loc = r.getDevice() != null && r.getDevice().getLocation() != null 
+                        ? r.getDevice().getLocation() 
+                        : null;
+                    return (loc != null && !loc.isBlank()) 
+                        ? LocationUtils.normalizeLocation(loc.trim()) 
+                        : "未知";
+                }));
+        
+        List<String> sortedLocations = LocationUtils.sortLocations(
+            locationGroups.keySet().stream()
+                .filter(loc -> !"未知".equals(loc))
+                .collect(Collectors.toList())
+        );
+        
+        for (String loc : sortedLocations) {
+            List<RepairRecord> recs = locationGroups.get(loc);
+            if (recs == null || recs.isEmpty()) continue;
+            Map<String, Object> stats = new LinkedHashMap<>();
+            BigDecimal cost = recs.stream()
+                    .map(r -> r.getCost() != null ? r.getCost() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            stats.put("totalCost", cost);
+            stats.put("count", recs.size());
+            stats.put("avgCost", cost.divide(BigDecimal.valueOf(recs.size()), 2, RoundingMode.HALF_UP));
+            byLocation.put(loc, stats);
+        }
+        
+        if (locationGroups.containsKey("未知")) {
+            List<RepairRecord> recs = locationGroups.get("未知");
+            Map<String, Object> stats = new LinkedHashMap<>();
+            BigDecimal cost = recs.stream()
+                    .map(r -> r.getCost() != null ? r.getCost() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            stats.put("totalCost", cost);
+            stats.put("count", recs.size());
+            stats.put("avgCost", cost.divide(BigDecimal.valueOf(recs.size()), 2, RoundingMode.HALF_UP));
+            byLocation.put("未知", stats);
+        }
+        
         result.put("byLocation", byLocation);
 
         Map<String, Map<String, Object>> byMonth = new LinkedHashMap<>();

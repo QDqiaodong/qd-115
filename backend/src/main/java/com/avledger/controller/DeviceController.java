@@ -13,6 +13,7 @@ import com.avledger.service.DeviceService;
 import com.avledger.service.HealthScoreService;
 import com.avledger.service.LampLifeService;
 import com.avledger.service.MaintenanceIntervalService;
+import com.avledger.util.LocationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -53,6 +54,22 @@ public class DeviceController {
     @GetMapping("/status/{status}")
     public ResponseEntity<List<Device>> findByStatus(@PathVariable DeviceStatus status) {
         return ResponseEntity.ok(deviceService.findByStatus(status));
+    }
+
+    @GetMapping("/locations/standard")
+    public ResponseEntity<List<String>> getStandardLocations() {
+        return ResponseEntity.ok(LocationUtils.STANDARD_LOCATIONS);
+    }
+
+    @GetMapping("/locations")
+    public ResponseEntity<List<String>> getLocations() {
+        List<Device> allDevices = deviceService.findAll();
+        List<String> locations = allDevices.stream()
+                .map(Device::getLocation)
+                .filter(Objects::nonNull)
+                .filter(loc -> !loc.isBlank())
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(LocationUtils.getNormalizedLocationList(locations));
     }
 
     @GetMapping("/{id}/allowed-transitions")
