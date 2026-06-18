@@ -336,10 +336,11 @@ public class UsageRecordService {
         
         List<Map<String, Object>> byLocation = new ArrayList<>(locationSummaryMap.values());
         byLocation.sort((a, b) -> (int) b.get("totalMinutes") - (int) a.get("totalMinutes"));
+        List<Map<String, Object>> sortedLocationItems = byLocation;
         byLocation = LocationUtils.sortLocations(byLocation.stream()
                 .map(m -> (String) m.get("location"))
                 .collect(Collectors.toList())).stream()
-                .map(loc -> byLocation.stream()
+                .map(loc -> sortedLocationItems.stream()
                         .filter(m -> loc.equals(m.get("location")))
                         .findFirst()
                         .orElse(null))
