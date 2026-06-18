@@ -48,6 +48,9 @@ public class Device {
     @Column(nullable = false, length = 20)
     private DeviceStatus status = DeviceStatus.NORMAL;
 
+    @Column(length = 255)
+    private String statusChangeSource;
+
     private LocalDate lampInstallDate;
 
     private Integer lampReplaceHours;

@@ -2,7 +2,9 @@ package com.avledger.service;
 
 import com.avledger.entity.Device;
 import com.avledger.entity.RepairRecord;
+import com.avledger.enums.DeviceStatus;
 import com.avledger.enums.DeviceType;
+import com.avledger.enums.FixResult;
 import com.avledger.repository.DeviceRepository;
 import com.avledger.repository.RepairRecordRepository;
 import com.avledger.util.LocationUtils;
@@ -23,6 +25,7 @@ public class RepairRecordService {
 
     private final RepairRecordRepository repairRecordRepository;
     private final DeviceRepository deviceRepository;
+    private final DeviceService deviceService;
 
     public List<RepairRecord> findByDeviceId(Long deviceId) {
         return repairRecordRepository.findByDeviceIdOrderByRepairTimeDesc(deviceId);
@@ -37,7 +40,9 @@ public class RepairRecordService {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new IllegalArgumentException("Device not found with id: " + deviceId));
         repairRecord.setDevice(device);
-        return repairRecordRepository.save(repairRecord);
+        RepairRecord savedRecord = repairRecordRepository.save(repairRecord);
+        updateDeviceStatusByFixResult(device, repairRecord.getFixResult(), savedRecord.getId());
+        return savedRecord;
     }
 
     @Transactional
@@ -47,15 +52,19 @@ public class RepairRecordService {
             existing.setSymptom(repairRecord.getSymptom());
             existing.setCause(repairRecord.getCause());
             existing.setFixMethod(repairRecord.getFixMethod());
+            existing.setFixResult(repairRecord.getFixResult());
             existing.setRepairPerson(repairRecord.getRepairPerson());
             existing.setCost(repairRecord.getCost());
             existing.setRemark(repairRecord.getRemark());
+            Device device = existing.getDevice();
             if (repairRecord.getDevice() != null && repairRecord.getDevice().getId() != null) {
-                Device device = deviceRepository.findById(repairRecord.getDevice().getId())
+                device = deviceRepository.findById(repairRecord.getDevice().getId())
                         .orElseThrow(() -> new IllegalArgumentException("Device not found"));
                 existing.setDevice(device);
             }
-            return repairRecordRepository.save(existing);
+            RepairRecord savedRecord = repairRecordRepository.save(existing);
+            updateDeviceStatusByFixResult(device, repairRecord.getFixResult(), savedRecord.getId());
+            return savedRecord;
         });
     }
 
@@ -66,6 +75,35 @@ public class RepairRecordService {
             return true;
         }
         return false;
+    }
+
+    private void updateDeviceStatusByFixResult(Device device, FixResult fixResult, Long repairRecordId) {
+        if (fixResult == null || device == null) {
+            return;
+        }
+        DeviceStatus targetStatus = null;
+        String fixResultLabel = "";
+        switch (fixResult) {
+            case FIXED:
+                targetStatus = DeviceStatus.NORMAL;
+                fixResultLabel = "已修复";
+                break;
+            case PARTIAL:
+                targetStatus = DeviceStatus.MAINTENANCE;
+                fixResultLabel = "部分修复";
+                break;
+            case UNFIXED:
+                targetStatus = DeviceStatus.FAULTY;
+                fixResultLabel = "无法修复";
+                break;
+        }
+        if (targetStatus != null && device.getStatus() != targetStatus) {
+            if (deviceService.isTransitionAllowed(device.getStatus(), targetStatus)) {
+                device.setStatus(targetStatus);
+                device.setStatusChangeSource("维修记录#" + repairRecordId + "（" + fixResultLabel + "）");
+                deviceRepository.save(device);
+            }
+        }
     }
 
     public List<Map<String, Object>> getRepairTimeline(Long deviceId) {

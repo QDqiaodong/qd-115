@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS device (
     location VARCHAR(100) COMMENT '摆放位置',
     hardware_specs TEXT COMMENT '硬件参数',
     status VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '设备状态',
+    status_change_source VARCHAR(255) COMMENT '状态变化来源',
     lamp_install_date DATE COMMENT '灯泡安装日期',
     lamp_replace_hours INT COMMENT '灯泡更换阈值(小时)',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -41,6 +42,7 @@ CREATE TABLE IF NOT EXISTS repair_record (
     symptom TEXT NOT NULL COMMENT '异常现象',
     cause TEXT COMMENT '故障原因',
     fix_method TEXT COMMENT '修复方式',
+    fix_result VARCHAR(20) COMMENT '修复结果：FIXED-已修复 PARTIAL-部分修复 UNFIXED-无法修复',
     repair_person VARCHAR(50) COMMENT '检修人',
     cost DECIMAL(10,2) COMMENT '费用',
     remark VARCHAR(255) COMMENT '备注',
@@ -108,10 +110,10 @@ INSERT INTO usage_record (device_id, usage_date, duration_minutes, scenario, rem
 (7, '2024-06-14', 75, '游戏', '连接PS5游戏');
 
 -- 预置检修记录
-INSERT INTO repair_record (device_id, repair_time, symptom, cause, fix_method, repair_person, cost, remark) VALUES
-(6, '2024-05-20 14:30:00', '投影画面模糊, 色彩失真', 'DMD芯片老化', '更换DMD芯片模组', '专业维修中心', 850.00, '保修期内免费更换'),
-(2, '2024-04-15 10:00:00', '开机无图像输出', 'HDMI接口松脱', '重新固定HDMI接口, 清洁触点', '自行处理', 0.00, '日常维护'),
-(5, '2024-06-01 09:00:00', '环绕音效失真, 单侧无声', '分频器电容损坏', '更换分频器组件', '授权维修点', 320.00, '正在维修中');
+INSERT INTO repair_record (device_id, repair_time, symptom, cause, fix_method, fix_result, repair_person, cost, remark) VALUES
+(6, '2024-05-20 14:30:00', '投影画面模糊, 色彩失真', 'DMD芯片老化', '更换DMD芯片模组', 'FIXED', '专业维修中心', 850.00, '保修期内免费更换'),
+(2, '2024-04-15 10:00:00', '开机无图像输出', 'HDMI接口松脱', '重新固定HDMI接口, 清洁触点', 'FIXED', '自行处理', 0.00, '日常维护'),
+(5, '2024-06-01 09:00:00', '环绕音效失真, 单侧无声', '分频器电容损坏', '更换分频器组件', 'PARTIAL', '授权维修点', 320.00, '正在维修中');
 
 -- 预置养护记录
 INSERT INTO maintenance_record (device_id, maintenance_time, maintenance_type, content, operator, remark) VALUES
@@ -140,3 +142,26 @@ INSERT INTO firmware_record (device_id, firmware_version, update_time, descripti
 (7, 'tvOS 17.5', '2024-06-01 09:00:00', '优化性能, 修复安全漏洞, 更新应用程序', '户主', '系统自动更新'),
 (6, 'v1.5.0', '2024-02-14 10:00:00', '出厂默认固件版本', '厂商', '出厂预装'),
 (6, 'v1.5.2', '2024-04-01 14:00:00', '优化亮度输出, 修复自动对焦问题', '户主', '官方固件更新');
+
+-- 数据库迁移脚本：为已存在的数据库添加新字段
+ALTER TABLE device ADD COLUMN IF NOT EXISTS status_change_source VARCHAR(255) COMMENT '状态变化来源';
+ALTER TABLE repair_record ADD COLUMN IF NOT EXISTS fix_result VARCHAR(20) COMMENT '修复结果：FIXED-已修复 PARTIAL-部分修复 UNFIXED-无法修复';
+
+-- 为已有维修记录更新设备状态
+UPDATE device d 
+INNER JOIN repair_record r ON d.id = r.device_id 
+SET d.status = CASE 
+    WHEN r.fix_result = 'FIXED' THEN 'NORMAL'
+    WHEN r.fix_result = 'PARTIAL' THEN 'MAINTENANCE'
+    WHEN r.fix_result = 'UNFIXED' THEN 'FAULTY'
+    ELSE d.status
+END,
+d.status_change_source = CONCAT('维修记录#', r.id, '（', 
+    CASE r.fix_result 
+        WHEN 'FIXED' THEN '已修复'
+        WHEN 'PARTIAL' THEN '部分修复'
+        WHEN 'UNFIXED' THEN '无法修复'
+        ELSE ''
+    END, '）')
+WHERE r.fix_result IS NOT NULL 
+AND r.id IN (SELECT MAX(id) FROM repair_record GROUP BY device_id);

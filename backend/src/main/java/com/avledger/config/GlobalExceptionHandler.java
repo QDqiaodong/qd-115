@@ -1,11 +1,16 @@
 package com.avledger.config;
 
+import com.avledger.entity.MaintenanceRecord;
+import com.avledger.exception.DuplicateMaintenanceException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -21,6 +26,25 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("message", e.getMessage()));
+    }
+
+    @ExceptionHandler(DuplicateMaintenanceException.class)
+    public ResponseEntity<Map<String, Object>> handleDuplicateMaintenance(DuplicateMaintenanceException e) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("message", e.getMessage());
+        List<Map<String, Object>> summaries = new ArrayList<>();
+        for (MaintenanceRecord record : e.getExistingRecords()) {
+            Map<String, Object> summary = new LinkedHashMap<>();
+            summary.put("id", record.getId());
+            summary.put("maintenanceTime", record.getMaintenanceTime());
+            summary.put("maintenanceType", record.getMaintenanceType());
+            summary.put("content", record.getContent());
+            summary.put("operator", record.getOperator());
+            summaries.add(summary);
+        }
+        body.put("existingRecords", summaries);
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(body);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

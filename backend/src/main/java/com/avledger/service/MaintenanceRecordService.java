@@ -4,6 +4,7 @@ import com.avledger.entity.Device;
 import com.avledger.entity.MaintenanceRecord;
 import com.avledger.enums.DeviceStatus;
 import com.avledger.enums.MaintenanceType;
+import com.avledger.exception.DuplicateMaintenanceException;
 import com.avledger.repository.DeviceRepository;
 import com.avledger.repository.MaintenanceRecordRepository;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,8 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,6 +46,8 @@ public class MaintenanceRecordService {
         if (device.getStatus() == DeviceStatus.RETIRED) {
             throw new IllegalStateException("退役设备不允许新增保养记录");
         }
+        checkDuplicateMaintenance(deviceId, maintenanceRecord.getMaintenanceType(), 
+                maintenanceRecord.getMaintenanceTime(), null);
         maintenanceRecord.setDevice(device);
         return maintenanceRecordRepository.save(maintenanceRecord);
     }
@@ -60,8 +65,9 @@ public class MaintenanceRecordService {
             if (resolvedDeviceId == null && maintenanceRecord.getDevice() != null && maintenanceRecord.getDevice().getId() != null) {
                 resolvedDeviceId = maintenanceRecord.getDevice().getId();
             }
+            Device device = existing.getDevice();
             if (resolvedDeviceId != null) {
-                Device device = deviceRepository.findById(resolvedDeviceId)
+                device = deviceRepository.findById(resolvedDeviceId)
                         .orElseThrow(() -> new IllegalArgumentException("Device not found"));
                 if (device.getStatus() == DeviceStatus.RETIRED) {
                     throw new IllegalStateException("退役设备不允许关联保养记录");
@@ -71,6 +77,12 @@ public class MaintenanceRecordService {
                 if (existing.getDevice() != null && existing.getDevice().getStatus() == DeviceStatus.RETIRED) {
                     throw new IllegalStateException("退役设备不允许关联保养记录");
                 }
+            }
+            Long checkDeviceId = resolvedDeviceId != null ? resolvedDeviceId : 
+                    (existing.getDevice() != null ? existing.getDevice().getId() : null);
+            if (checkDeviceId != null) {
+                checkDuplicateMaintenance(checkDeviceId, maintenanceRecord.getMaintenanceType(),
+                        maintenanceRecord.getMaintenanceTime(), id);
             }
             return maintenanceRecordRepository.save(existing);
         });
@@ -84,5 +96,31 @@ public class MaintenanceRecordService {
             return true;
         }
         return false;
+    }
+
+    private void checkDuplicateMaintenance(Long deviceId, MaintenanceType maintenanceType, 
+            LocalDateTime maintenanceTime, Long excludeId) {
+        if (deviceId == null || maintenanceType == null || maintenanceTime == null) {
+            return;
+        }
+        LocalDate maintenanceDate = maintenanceTime.toLocalDate();
+        List<MaintenanceRecord> duplicates = maintenanceRecordRepository.findDuplicateRecords(
+                deviceId, maintenanceType, maintenanceDate, excludeId);
+        if (!duplicates.isEmpty()) {
+            String typeLabel = getMaintenanceTypeLabel(maintenanceType);
+            String message = String.format("该设备在 %s 已存在%s记录，请勿重复提交", 
+                    maintenanceDate, typeLabel);
+            throw new DuplicateMaintenanceException(message, duplicates);
+        }
+    }
+
+    private String getMaintenanceTypeLabel(MaintenanceType type) {
+        switch (type) {
+            case CLEANING: return "机身清洁";
+            case CABLE: return "线路整理";
+            case FIRMWARE: return "固件升级";
+            case OTHER: return "其他保养";
+            default: return type.name();
+        }
     }
 }

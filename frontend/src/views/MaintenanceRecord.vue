@@ -64,6 +64,28 @@
       </el-table>
     </el-card>
 
+    <el-dialog v-model="duplicateVisible" title="检测到重复养护记录" width="560px" destroy-on-close>
+      <el-alert :title="duplicateMessage" type="warning" show-icon :closable="false" style="margin-bottom: 16px" />
+      <div class="duplicate-records-title">已有记录摘要：</div>
+      <div v-for="record in duplicateRecords" :key="record.id" class="duplicate-record-item">
+        <div class="duplicate-record-header">
+          <el-tag :type="typeTagColor(record.maintenanceType)" size="small">
+            {{ typeLabel(record.maintenanceType) }}
+          </el-tag>
+          <span class="duplicate-record-time">{{ record.maintenanceTime }}</span>
+        </div>
+        <div class="duplicate-record-content">
+          <strong>内容：</strong>{{ record.content }}
+        </div>
+        <div class="duplicate-record-operator" v-if="record.operator">
+          <strong>操作人：</strong>{{ record.operator }}
+        </div>
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="duplicateVisible = false">我知道了</el-button>
+      </template>
+    </el-dialog>
+
     <el-dialog v-model="formVisible" :title="formMode === 'create' ? '新增养护记录' : '编辑养护记录'" width="560px" destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px">
         <el-form-item label="设备" prop="deviceId">
@@ -146,6 +168,10 @@ const formRef = ref(null)
 const form = ref({
   deviceId: '', maintenanceTime: '', maintenanceType: '', content: '', operator: '', remark: ''
 })
+
+const duplicateVisible = ref(false)
+const duplicateMessage = ref('')
+const duplicateRecords = ref([])
 
 const formRules = {
   deviceId: [{ required: true, message: '请选择设备', trigger: 'change' }],
@@ -251,7 +277,13 @@ const submitForm = async () => {
     formVisible.value = false
     fetchData()
   } catch (e) {
-    if (e !== false) ElMessage.error('操作失败')
+    if (e && e.isDuplicate) {
+      duplicateMessage.value = e.message
+      duplicateRecords.value = e.existingRecords
+      duplicateVisible.value = true
+    } else if (e !== false) {
+      ElMessage.error('操作失败')
+    }
   }
 }
 
@@ -339,4 +371,46 @@ onMounted(async () => {
   font-weight: 400;
 }
 .mt-window-status { margin-top: 2px; }
+
+.duplicate-records-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 12px;
+}
+
+.duplicate-record-item {
+  background: #f5f7fa;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.duplicate-record-item:last-child {
+  margin-bottom: 0;
+}
+
+.duplicate-record-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.duplicate-record-time {
+  font-size: 13px;
+  color: #909399;
+}
+
+.duplicate-record-content {
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+
+.duplicate-record-operator {
+  font-size: 12px;
+  color: #909399;
+}
 </style>

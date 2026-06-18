@@ -22,6 +22,14 @@
           <el-table-column label="维修详情" align="center">
             <el-table-column prop="cause" label="故障原因" show-overflow-tooltip min-width="150" />
             <el-table-column prop="fixMethod" label="修复方式" show-overflow-tooltip min-width="150" />
+            <el-table-column label="修复结果" width="100">
+              <template #default="{ row }">
+                <el-tag v-if="row.fixResult" :type="fixResultTagType(row.fixResult)" size="small">
+                  {{ fixResultLabel(row.fixResult) }}
+                </el-tag>
+                <span v-else class="text-muted">未填写</span>
+              </template>
+            </el-table-column>
             <el-table-column prop="repairPerson" label="维修人员" width="100" />
             <el-table-column label="费用" width="120" align="right">
               <template #default="{ row }">
@@ -62,6 +70,14 @@
         </el-form-item>
         <el-form-item label="修复方式" prop="fixMethod">
           <el-input v-model="form.fixMethod" type="textarea" :rows="2" placeholder="请描述修复方式" />
+        </el-form-item>
+        <el-form-item label="修复结果" prop="fixResult">
+          <el-select v-model="form.fixResult" placeholder="请选择修复结果" style="width: 100%" clearable>
+            <el-option label="已修复" value="FIXED" />
+            <el-option label="部分修复" value="PARTIAL" />
+            <el-option label="无法修复" value="UNFIXED" />
+          </el-select>
+          <div class="form-hint">选择后将自动更新设备状态</div>
         </el-form-item>
         <el-form-item label="检修人" prop="repairPerson">
           <el-input v-model="form.repairPerson" placeholder="请输入检修人姓名" />
@@ -108,11 +124,18 @@ const statusTagType = (status) => {
   return map[status] || 'info'
 }
 
+const fixResultLabelMap = { FIXED: '已修复', PARTIAL: '部分修复', UNFIXED: '无法修复' }
+const fixResultLabel = (s) => fixResultLabelMap[s] || s
+const fixResultTagType = (s) => {
+  const map = { FIXED: 'success', PARTIAL: 'warning', UNFIXED: 'danger' }
+  return map[s] || 'info'
+}
+
 const formVisible = ref(false)
 const formMode = ref('create')
 const formRef = ref(null)
 const form = ref({
-  deviceId: '', repairTime: '', symptom: '', cause: '', fixMethod: '', repairPerson: '', cost: 0, remark: ''
+  deviceId: '', repairTime: '', symptom: '', cause: '', fixMethod: '', fixResult: '', repairPerson: '', cost: 0, remark: ''
 })
 
 const formRules = {
@@ -156,6 +179,7 @@ const openForm = (row = null) => {
       symptom: row.symptom,
       cause: row.cause,
       fixMethod: row.fixMethod,
+      fixResult: row.fixResult || '',
       repairPerson: row.repairPerson,
       cost: row.cost || 0,
       remark: row.remark
@@ -168,6 +192,7 @@ const openForm = (row = null) => {
       symptom: '',
       cause: '',
       fixMethod: '',
+      fixResult: '',
       repairPerson: '',
       cost: 0,
       remark: ''
@@ -204,6 +229,7 @@ const submitForm = async () => {
       symptom: form.value.symptom,
       cause: form.value.cause,
       fixMethod: form.value.fixMethod,
+      fixResult: form.value.fixResult || null,
       repairPerson: form.value.repairPerson,
       cost: form.value.cost,
       remark: form.value.remark
@@ -217,6 +243,7 @@ const submitForm = async () => {
     }
     formVisible.value = false
     fetchData()
+    fetchDevices()
   } catch (e) {
     if (e !== false) ElMessage.error('操作失败')
   }
@@ -245,6 +272,15 @@ onMounted(async () => {
 .cost-amount {
   font-weight: 600;
   color: #f56c6c;
+}
+.text-muted {
+  color: #c0c4cc;
+  font-size: 12px;
+}
+.form-hint {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
 }
 :deep(.el-table .el-table__group-title) {
   font-weight: 600;

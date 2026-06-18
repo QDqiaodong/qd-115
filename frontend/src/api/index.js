@@ -14,6 +14,13 @@ request.interceptors.request.use(
 request.interceptors.response.use(
   response => response.data,
   error => {
+    if (error.response?.status === 409 && error.response?.data?.existingRecords) {
+      return Promise.reject({
+        isDuplicate: true,
+        message: error.response.data.message,
+        existingRecords: error.response.data.existingRecords
+      })
+    }
     ElMessage.error(error.response?.data?.message || '请求失败')
     return Promise.reject(error)
   }

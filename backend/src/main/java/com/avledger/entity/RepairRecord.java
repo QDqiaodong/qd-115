@@ -1,5 +1,6 @@
 package com.avledger.entity;
 
+import com.avledger.enums.FixResult;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -39,6 +40,10 @@ public class RepairRecord {
 
     @Column(columnDefinition = "TEXT")
     private String fixMethod;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private FixResult fixResult;
 
     @Column(length = 50)
     private String repairPerson;
