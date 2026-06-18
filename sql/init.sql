@@ -143,10 +143,6 @@ INSERT INTO firmware_record (device_id, firmware_version, update_time, descripti
 (6, 'v1.5.0', '2024-02-14 10:00:00', '出厂默认固件版本', '厂商', '出厂预装'),
 (6, 'v1.5.2', '2024-04-01 14:00:00', '优化亮度输出, 修复自动对焦问题', '户主', '官方固件更新');
 
--- 数据库迁移脚本：为已存在的数据库添加新字段
-ALTER TABLE device ADD COLUMN IF NOT EXISTS status_change_source VARCHAR(255) COMMENT '状态变化来源';
-ALTER TABLE repair_record ADD COLUMN IF NOT EXISTS fix_result VARCHAR(20) COMMENT '修复结果：FIXED-已修复 PARTIAL-部分修复 UNFIXED-无法修复';
-
 -- 为已有维修记录更新设备状态
 UPDATE device d 
 INNER JOIN repair_record r ON d.id = r.device_id 
