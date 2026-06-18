@@ -16,7 +16,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -219,12 +221,15 @@ public class UsageRecordService {
         return LocationUtils.getNormalizedLocationList(locations);
     }
 
-    public List<Map<String, Object>> getDeviceUsageSummary(DeviceType deviceType, String location) {
+    public Map<String, Object> getDeviceUsageSummary(DeviceType deviceType, String location) {
         String normalizedLocation = (location != null && !location.isBlank()) 
             ? LocationUtils.normalizeLocation(location) 
             : null;
         
         Map<Long, Map<String, Object>> deviceSummaryMap = new java.util.LinkedHashMap<>();
+        Map<String, Map<String, Object>> deviceTypeSummaryMap = new java.util.LinkedHashMap<>();
+        Map<String, Map<String, Object>> locationSummaryMap = new java.util.LinkedHashMap<>();
+        
         List<Device> allDevices = deviceRepository.findAll();
         
         for (Device device : allDevices) {
@@ -262,24 +267,89 @@ public class UsageRecordService {
                 }
             }
             
-            Map<String, Object> summary = new HashMap<>();
-            summary.put("deviceId", device.getId());
-            summary.put("deviceName", device.getName());
-            summary.put("deviceType", device.getDeviceType().name());
-            summary.put("deviceTypeLabel", device.getDeviceType().getLabel());
-            summary.put("location", device.getLocation());
-            summary.put("normalizedLocation", LocationUtils.normalizeLocation(device.getLocation()));
-            summary.put("totalMinutes", totalMinutes);
-            summary.put("totalHours", Math.round(totalMinutes / 60.0 * 10) / 10.0);
-            summary.put("lastUsedDate", lastUsedDate != null ? lastUsedDate.toString() : null);
-            summary.put("maxSingleDuration", maxSingleDuration);
-            summary.put("maxSingleDurationHours", Math.round(maxSingleDuration / 60.0 * 10) / 10.0);
+            Map<String, Object> deviceSummary = new HashMap<>();
+            deviceSummary.put("deviceId", device.getId());
+            deviceSummary.put("deviceName", device.getName());
+            deviceSummary.put("deviceType", device.getDeviceType().name());
+            deviceSummary.put("deviceTypeLabel", device.getDeviceType().getLabel());
+            deviceSummary.put("location", device.getLocation());
+            deviceSummary.put("normalizedLocation", LocationUtils.normalizeLocation(device.getLocation()));
+            deviceSummary.put("totalMinutes", totalMinutes);
+            deviceSummary.put("totalHours", Math.round(totalMinutes / 60.0 * 10) / 10.0);
+            deviceSummary.put("lastUsedDate", lastUsedDate != null ? lastUsedDate.toString() : null);
+            deviceSummary.put("maxSingleDuration", maxSingleDuration);
+            deviceSummary.put("maxSingleDurationHours", Math.round(maxSingleDuration / 60.0 * 10) / 10.0);
             
-            deviceSummaryMap.put(device.getId(), summary);
+            deviceSummaryMap.put(device.getId(), deviceSummary);
+            
+            String typeKey = device.getDeviceType().name();
+            Map<String, Object> typeSummary = deviceTypeSummaryMap.get(typeKey);
+            if (typeSummary == null) {
+                typeSummary = new HashMap<>();
+                typeSummary.put("deviceType", device.getDeviceType().name());
+                typeSummary.put("deviceTypeLabel", device.getDeviceType().getLabel());
+                typeSummary.put("totalMinutes", 0);
+                typeSummary.put("lastUsedDate", null);
+                typeSummary.put("maxSingleDuration", 0);
+                deviceTypeSummaryMap.put(typeKey, typeSummary);
+            }
+            int typeTotalMinutes = (int) typeSummary.get("totalMinutes") + totalMinutes;
+            typeSummary.put("totalMinutes", typeTotalMinutes);
+            typeSummary.put("totalHours", Math.round(typeTotalMinutes / 60.0 * 10) / 10.0);
+            String typeLastUsed = (String) typeSummary.get("lastUsedDate");
+            if (typeLastUsed == null || (lastUsedDate != null && lastUsedDate.isAfter(LocalDate.parse(typeLastUsed)))) {
+                typeSummary.put("lastUsedDate", lastUsedDate != null ? lastUsedDate.toString() : null);
+            }
+            int typeMaxDuration = Math.max((int) typeSummary.get("maxSingleDuration"), maxSingleDuration);
+            typeSummary.put("maxSingleDuration", typeMaxDuration);
+            typeSummary.put("maxSingleDurationHours", Math.round(typeMaxDuration / 60.0 * 10) / 10.0);
+            
+            String locKey = LocationUtils.normalizeLocation(device.getLocation());
+            if (locKey != null && !locKey.isEmpty()) {
+                Map<String, Object> locSummary = locationSummaryMap.get(locKey);
+                if (locSummary == null) {
+                    locSummary = new HashMap<>();
+                    locSummary.put("location", locKey);
+                    locSummary.put("totalMinutes", 0);
+                    locSummary.put("lastUsedDate", null);
+                    locSummary.put("maxSingleDuration", 0);
+                    locationSummaryMap.put(locKey, locSummary);
+                }
+                int locTotalMinutes = (int) locSummary.get("totalMinutes") + totalMinutes;
+                locSummary.put("totalMinutes", locTotalMinutes);
+                locSummary.put("totalHours", Math.round(locTotalMinutes / 60.0 * 10) / 10.0);
+                String locLastUsed = (String) locSummary.get("lastUsedDate");
+                if (locLastUsed == null || (lastUsedDate != null && lastUsedDate.isAfter(LocalDate.parse(locLastUsed)))) {
+                    locSummary.put("lastUsedDate", lastUsedDate != null ? lastUsedDate.toString() : null);
+                }
+                int locMaxDuration = Math.max((int) locSummary.get("maxSingleDuration"), maxSingleDuration);
+                locSummary.put("maxSingleDuration", locMaxDuration);
+                locSummary.put("maxSingleDurationHours", Math.round(locMaxDuration / 60.0 * 10) / 10.0);
+            }
         }
         
-        List<Map<String, Object>> result = new ArrayList<>(deviceSummaryMap.values());
-        result.sort((a, b) -> (int) b.get("totalMinutes") - (int) a.get("totalMinutes"));
+        List<Map<String, Object>> byDevice = new ArrayList<>(deviceSummaryMap.values());
+        byDevice.sort((a, b) -> (int) b.get("totalMinutes") - (int) a.get("totalMinutes"));
+        
+        List<Map<String, Object>> byDeviceType = new ArrayList<>(deviceTypeSummaryMap.values());
+        byDeviceType.sort((a, b) -> (int) b.get("totalMinutes") - (int) a.get("totalMinutes"));
+        
+        List<Map<String, Object>> byLocation = new ArrayList<>(locationSummaryMap.values());
+        byLocation.sort((a, b) -> (int) b.get("totalMinutes") - (int) a.get("totalMinutes"));
+        byLocation = LocationUtils.sortLocations(byLocation.stream()
+                .map(m -> (String) m.get("location"))
+                .collect(Collectors.toList())).stream()
+                .map(loc -> byLocation.stream()
+                        .filter(m -> loc.equals(m.get("location")))
+                        .findFirst()
+                        .orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("byDevice", byDevice);
+        result.put("byDeviceType", byDeviceType);
+        result.put("byLocation", byLocation);
         
         return result;
     }

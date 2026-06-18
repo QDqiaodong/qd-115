@@ -75,7 +75,7 @@ public class UsageRecordController {
     }
 
     @GetMapping("/device-summary")
-    public ResponseEntity<List<Map<String, Object>>> getDeviceUsageSummary(
+    public ResponseEntity<Map<String, Object>> getDeviceUsageSummary(
             @RequestParam(required = false) String deviceType,
             @RequestParam(required = false) String location) {
         DeviceType type = null;
