@@ -218,4 +218,69 @@ public class UsageRecordService {
         List<String> locations = deviceRepository.findDistinctLocations();
         return LocationUtils.getNormalizedLocationList(locations);
     }
+
+    public List<Map<String, Object>> getDeviceUsageSummary(DeviceType deviceType, String location) {
+        String normalizedLocation = (location != null && !location.isBlank()) 
+            ? LocationUtils.normalizeLocation(location) 
+            : null;
+        
+        Map<Long, Map<String, Object>> deviceSummaryMap = new java.util.LinkedHashMap<>();
+        List<Device> allDevices = deviceRepository.findAll();
+        
+        for (Device device : allDevices) {
+            if (deviceType != null && device.getDeviceType() != deviceType) {
+                continue;
+            }
+            if (normalizedLocation != null) {
+                String deviceLocation = device.getLocation();
+                if (deviceLocation == null || deviceLocation.isBlank()) {
+                    continue;
+                }
+                String deviceNormalizedLocation = LocationUtils.normalizeLocation(deviceLocation);
+                if (!deviceNormalizedLocation.equals(normalizedLocation)) {
+                    continue;
+                }
+            }
+            
+            List<UsageRecord> records = usageRecordRepository.findByDeviceIdOrderByUsageDateDesc(device.getId());
+            if (records.isEmpty()) {
+                continue;
+            }
+            
+            int totalMinutes = 0;
+            LocalDate lastUsedDate = null;
+            int maxSingleDuration = 0;
+            
+            for (UsageRecord record : records) {
+                int duration = record.getDurationMinutes() != null ? record.getDurationMinutes() : 0;
+                totalMinutes += duration;
+                if (lastUsedDate == null || record.getUsageDate().isAfter(lastUsedDate)) {
+                    lastUsedDate = record.getUsageDate();
+                }
+                if (duration > maxSingleDuration) {
+                    maxSingleDuration = duration;
+                }
+            }
+            
+            Map<String, Object> summary = new HashMap<>();
+            summary.put("deviceId", device.getId());
+            summary.put("deviceName", device.getName());
+            summary.put("deviceType", device.getDeviceType().name());
+            summary.put("deviceTypeLabel", device.getDeviceType().getLabel());
+            summary.put("location", device.getLocation());
+            summary.put("normalizedLocation", LocationUtils.normalizeLocation(device.getLocation()));
+            summary.put("totalMinutes", totalMinutes);
+            summary.put("totalHours", Math.round(totalMinutes / 60.0 * 10) / 10.0);
+            summary.put("lastUsedDate", lastUsedDate != null ? lastUsedDate.toString() : null);
+            summary.put("maxSingleDuration", maxSingleDuration);
+            summary.put("maxSingleDurationHours", Math.round(maxSingleDuration / 60.0 * 10) / 10.0);
+            
+            deviceSummaryMap.put(device.getId(), summary);
+        }
+        
+        List<Map<String, Object>> result = new ArrayList<>(deviceSummaryMap.values());
+        result.sort((a, b) -> (int) b.get("totalMinutes") - (int) a.get("totalMinutes"));
+        
+        return result;
+    }
 }

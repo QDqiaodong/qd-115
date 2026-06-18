@@ -74,6 +74,18 @@ public class UsageRecordController {
         return ResponseEntity.ok(usageRecordService.getDistinctLocations());
     }
 
+    @GetMapping("/device-summary")
+    public ResponseEntity<List<Map<String, Object>>> getDeviceUsageSummary(
+            @RequestParam(required = false) String deviceType,
+            @RequestParam(required = false) String location) {
+        DeviceType type = null;
+        if (deviceType != null && !deviceType.isBlank()) {
+            type = DeviceType.valueOf(deviceType);
+        }
+        String loc = (location != null && !location.isBlank()) ? location : null;
+        return ResponseEntity.ok(usageRecordService.getDeviceUsageSummary(type, loc));
+    }
+
     @PostMapping
     public ResponseEntity<UsageRecord> create(@RequestBody Map<String, Object> payload) {
         Long deviceId = Long.valueOf(payload.get("deviceId").toString());

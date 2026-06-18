@@ -60,4 +60,17 @@ public interface UsageRecordRepository extends JpaRepository<UsageRecord, Long> 
     List<Object[]> sumDurationByScene(
             @Param("deviceType") com.avledger.enums.DeviceType deviceType,
             @Param("location") String location);
+
+    @Query("SELECT u.device.id, u.device.name, u.device.deviceType, u.device.location, " +
+            "COALESCE(SUM(u.durationMinutes), 0) as totalMinutes, " +
+            "MAX(u.usageDate) as lastUsedDate, " +
+            "MAX(u.durationMinutes) as maxSingleDuration " +
+            "FROM UsageRecord u " +
+            "WHERE (:deviceType IS NULL OR u.device.deviceType = :deviceType) " +
+            "AND (:location IS NULL OR u.device.location = :location) " +
+            "GROUP BY u.device.id, u.device.name, u.device.deviceType, u.device.location " +
+            "ORDER BY totalMinutes DESC")
+    List<Object[]> getDeviceUsageSummary(
+            @Param("deviceType") com.avledger.enums.DeviceType deviceType,
+            @Param("location") String location);
 }
