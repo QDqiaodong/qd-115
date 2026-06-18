@@ -7,6 +7,8 @@ import MaintenanceRecord from '../views/MaintenanceRecord.vue'
 import MaintenanceChecklist from '../views/MaintenanceChecklist.vue'
 import StatusWall from '../views/StatusWall.vue'
 import CostStatistics from '../views/CostStatistics.vue'
+import CableConnection from '../views/CableConnection.vue'
+import AmplifierCalibration from '../views/AmplifierCalibration.vue'
 
 const routes = [
   { path: '/', redirect: '/devices' },
@@ -17,7 +19,9 @@ const routes = [
   { path: '/maintenance', name: 'MaintenanceRecord', component: MaintenanceRecord },
   { path: '/maintenance-checklist', name: 'MaintenanceChecklist', component: MaintenanceChecklist },
   { path: '/status-wall', name: 'StatusWall', component: StatusWall },
-  { path: '/cost-statistics', name: 'CostStatistics', component: CostStatistics }
+  { path: '/cost-statistics', name: 'CostStatistics', component: CostStatistics },
+  { path: '/cable-connections', name: 'CableConnection', component: CableConnection },
+  { path: '/amplifier-calibration', name: 'AmplifierCalibration', component: AmplifierCalibration }
 ]
 
 const router = createRouter({

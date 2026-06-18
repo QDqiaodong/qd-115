@@ -45,6 +45,18 @@
             <span>流程清单</span>
           </el-menu-item>
         </el-sub-menu>
+        <el-sub-menu index="connection-group">
+          <template #title>
+            <el-icon><Connection /></el-icon>
+            <span>连接与校准</span>
+          </template>
+          <el-menu-item index="/cable-connections">
+            <span>线缆连接台账</span>
+          </el-menu-item>
+          <el-menu-item index="/amplifier-calibration">
+            <span>功放校准记录</span>
+          </el-menu-item>
+        </el-sub-menu>
         <el-menu-item index="/cost-statistics">
           <el-icon><TrendCharts /></el-icon>
           <span>费用统计</span>
@@ -60,7 +72,7 @@
 </template>
 
 <script setup>
-import { Monitor, Timer, Warning, Tools, Location, DataBoard, TrendCharts } from '@element-plus/icons-vue'
+import { Monitor, Timer, Warning, Tools, Location, DataBoard, TrendCharts, Connection } from '@element-plus/icons-vue'
 </script>
 
 <style scoped>

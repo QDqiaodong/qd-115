@@ -145,6 +145,66 @@ INSERT INTO firmware_record (device_id, firmware_version, update_time, descripti
 (6, 'v1.5.0', '2024-02-14 10:00:00', '出厂默认固件版本', '厂商', '出厂预装'),
 (6, 'v1.5.2', '2024-04-01 14:00:00', '优化亮度输出, 修复自动对焦问题', '户主', '官方固件更新');
 
+-- 线缆连接台账表
+CREATE TABLE IF NOT EXISTS cable_connection (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    source_device_id BIGINT NOT NULL COMMENT '源设备ID',
+    target_device_id BIGINT NOT NULL COMMENT '目标设备ID',
+    interface_type VARCHAR(50) NOT NULL COMMENT '接口类型',
+    cable_length DECIMAL(10,2) NOT NULL COMMENT '线缆长度(米)',
+    connection_location VARCHAR(100) COMMENT '连接位置',
+    source_port VARCHAR(50) COMMENT '源设备端口',
+    target_port VARCHAR(50) COMMENT '目标设备端口',
+    remark TEXT COMMENT '备注',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_source_device (source_device_id),
+    INDEX idx_target_device (target_device_id),
+    INDEX idx_interface_type (interface_type),
+    CONSTRAINT fk_cable_source FOREIGN KEY (source_device_id) REFERENCES device(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cable_target FOREIGN KEY (target_device_id) REFERENCES device(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='线缆连接台账';
+
+-- 功放校准记录表
+CREATE TABLE IF NOT EXISTS amplifier_calibration (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    amplifier_id BIGINT NOT NULL COMMENT '功放设备ID',
+    channel_name VARCHAR(50) NOT NULL COMMENT '声道名称',
+    volume_reference DECIMAL(10,2) NOT NULL COMMENT '音量基准(dB)',
+    distance DECIMAL(10,2) NOT NULL COMMENT '距离(米)',
+    crossover_point INT NOT NULL COMMENT '分频点(Hz)',
+    calibration_date DATE NOT NULL COMMENT '校准日期',
+    calibration_method VARCHAR(50) COMMENT '校准方式',
+    remark TEXT COMMENT '备注',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_amplifier_id (amplifier_id),
+    INDEX idx_calibration_date (calibration_date),
+    INDEX idx_channel_name (channel_name),
+    CONSTRAINT fk_calibration_amplifier FOREIGN KEY (amplifier_id) REFERENCES device(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='功放校准记录';
+
+-- 预置线缆连接数据
+INSERT INTO cable_connection (source_device_id, target_device_id, interface_type, cable_length, connection_location, source_port, target_port, remark) VALUES
+(3, 4, 'HDMI 2.1', 2.0, '客厅设备柜', 'HDMI OUT 1', 'HDMI IN 1', '蓝光机主音频输出'),
+(7, 4, 'HDMI 2.1', 1.5, '客厅设备柜', 'HDMI OUT', 'HDMI IN 2', 'Apple TV 4K 输出'),
+(4, 2, 'HDMI 2.1', 5.0, '客厅吊顶-设备柜', 'HDMI OUT MAIN', 'HDMI IN', '功放主输出至投影仪'),
+(4, 1, 'XLR平衡', 3.5, '客厅电视墙-设备柜', '前置左声道输出', 'XLR IN', '主音箱左声道'),
+(4, 1, 'XLR平衡', 3.5, '客厅电视墙-设备柜', '前置右声道输出', 'XLR IN', '主音箱右声道'),
+(4, 5, '喇叭线', 8.0, '客厅侧墙-设备柜', '环绕左输出', '接线柱', '环绕音响组左声道'),
+(4, 5, '喇叭线', 8.0, '客厅侧墙-设备柜', '环绕右输出', '接线柱', '环绕音响组右声道'),
+(3, 4, '光纤', 2.5, '客厅设备柜', 'OPTICAL OUT', 'OPTICAL IN 1', '备用数字音频输出');
+
+-- 预置功放校准数据
+INSERT INTO amplifier_calibration (amplifier_id, channel_name, volume_reference, distance, crossover_point, calibration_date, calibration_method, remark) VALUES
+(4, '前置左声道', 75.0, 3.2, 80, '2024-05-20', 'Dirac Live', '首次全屋声学校准'),
+(4, '前置右声道', 75.0, 3.2, 80, '2024-05-20', 'Dirac Live', '首次全屋声学校准'),
+(4, '中置声道', 75.0, 3.5, 80, '2024-05-20', 'Dirac Live', '首次全屋声学校准'),
+(4, '环绕左声道', 72.0, 4.5, 100, '2024-05-20', 'Dirac Live', '首次全屋声学校准'),
+(4, '环绕右声道', 72.0, 4.5, 100, '2024-05-20', 'Dirac Live', '首次全屋声学校准'),
+(4, '低音炮.1', 78.0, 4.0, 80, '2024-05-20', 'Dirac Live', '首次全屋声学校准'),
+(4, '前置左声道', 75.5, 3.2, 80, '2024-06-15', '手动微调', '根据听感微调音量');
+
 -- 为已有维修记录更新设备状态
 UPDATE device d 
 INNER JOIN repair_record r ON d.id = r.device_id 

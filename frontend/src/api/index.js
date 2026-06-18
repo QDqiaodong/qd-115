@@ -123,4 +123,29 @@ export const createFirmware = (data) => request.post('/firmware', data)
 export const updateFirmware = (id, data) => request.put(`/firmware/${id}`, data)
 export const deleteFirmware = (id) => request.delete(`/firmware/${id}`)
 
+export const getAllCableConnections = (deviceId) => {
+  const params = new URLSearchParams()
+  if (deviceId) params.append('deviceId', deviceId)
+  const query = params.toString()
+  return request.get(`/cable-connections${query ? '?' + query : ''}`)
+}
+export const getCableConnectionsByDevice = (deviceId) => request.get(`/cable-connections/device/${deviceId}`)
+export const getCableConnection = (id) => request.get(`/cable-connections/${id}`)
+export const createCableConnection = (data) => request.post('/cable-connections', data)
+export const updateCableConnection = (id, data) => request.put(`/cable-connections/${id}`, data)
+export const deleteCableConnection = (id) => request.delete(`/cable-connections/${id}`)
+
+export const getAllAmplifierCalibrations = (amplifierId) => {
+  const params = new URLSearchParams()
+  if (amplifierId) params.append('amplifierId', amplifierId)
+  const query = params.toString()
+  return request.get(`/amplifier-calibrations${query ? '?' + query : ''}`)
+}
+export const getCalibrationsByAmplifier = (amplifierId) => request.get(`/amplifier-calibrations/amplifier/${amplifierId}`)
+export const getAmplifierCalibration = (id) => request.get(`/amplifier-calibrations/${id}`)
+export const getLatestCalibrationByAmplifier = (amplifierId) => request.get(`/amplifier-calibrations/amplifier/${amplifierId}/latest`)
+export const createAmplifierCalibration = (data) => request.post('/amplifier-calibrations', data)
+export const updateAmplifierCalibration = (id, data) => request.put(`/amplifier-calibrations/${id}`, data)
+export const deleteAmplifierCalibration = (id) => request.delete(`/amplifier-calibrations/${id}`)
+
 export default request
