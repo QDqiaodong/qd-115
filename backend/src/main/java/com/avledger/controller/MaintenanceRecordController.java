@@ -43,8 +43,11 @@ public class MaintenanceRecordController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<MaintenanceRecord> update(@PathVariable Long id, @RequestBody MaintenanceRecord maintenanceRecord) {
-        return maintenanceRecordService.update(id, maintenanceRecord)
+    public ResponseEntity<MaintenanceRecord> update(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+        Long deviceId = payload.get("deviceId") != null ? Long.valueOf(payload.get("deviceId").toString()) : null;
+        payload.remove("deviceId");
+        MaintenanceRecord maintenanceRecord = objectMapper.convertValue(payload, MaintenanceRecord.class);
+        return maintenanceRecordService.update(id, maintenanceRecord, deviceId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

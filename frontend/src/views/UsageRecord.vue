@@ -97,7 +97,7 @@
     <el-dialog v-model="formVisible" :title="formMode === 'create' ? '新增使用记录' : '编辑使用记录'" width="500px" destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px">
         <el-form-item label="设备" prop="deviceId">
-          <el-select v-model="form.deviceId" placeholder="选择设备" style="width: 100%" :disabled="formMode === 'edit'">
+          <el-select v-model="form.deviceId" placeholder="选择设备" style="width: 100%">
             <el-option v-for="d in deviceList" :key="d.id" :label="d.name" :value="d.id" />
           </el-select>
         </el-form-item>

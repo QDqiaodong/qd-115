@@ -49,16 +49,23 @@ public class MaintenanceRecordService {
 
     @CacheEvict(value = "maintenanceCycles", allEntries = true)
     @Transactional
-    public Optional<MaintenanceRecord> update(Long id, MaintenanceRecord maintenanceRecord) {
+    public Optional<MaintenanceRecord> update(Long id, MaintenanceRecord maintenanceRecord, Long deviceId) {
         return maintenanceRecordRepository.findById(id).map(existing -> {
             existing.setMaintenanceTime(maintenanceRecord.getMaintenanceTime());
             existing.setMaintenanceType(maintenanceRecord.getMaintenanceType());
             existing.setContent(maintenanceRecord.getContent());
             existing.setOperator(maintenanceRecord.getOperator());
             existing.setRemark(maintenanceRecord.getRemark());
-            if (maintenanceRecord.getDevice() != null && maintenanceRecord.getDevice().getId() != null) {
-                Device device = deviceRepository.findById(maintenanceRecord.getDevice().getId())
+            Long resolvedDeviceId = deviceId;
+            if (resolvedDeviceId == null && maintenanceRecord.getDevice() != null && maintenanceRecord.getDevice().getId() != null) {
+                resolvedDeviceId = maintenanceRecord.getDevice().getId();
+            }
+            if (resolvedDeviceId != null) {
+                Device device = deviceRepository.findById(resolvedDeviceId)
                         .orElseThrow(() -> new IllegalArgumentException("Device not found"));
+                if (device.getStatus() == DeviceStatus.RETIRED) {
+                    throw new IllegalStateException("退役设备不允许关联保养记录");
+                }
                 existing.setDevice(device);
             }
             return maintenanceRecordRepository.save(existing);

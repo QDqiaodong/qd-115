@@ -110,15 +110,22 @@ public class UsageRecordService {
     }
 
     @Transactional
-    public Optional<UsageRecord> update(Long id, UsageRecord usageRecord) {
+    public Optional<UsageRecord> update(Long id, UsageRecord usageRecord, Long deviceId) {
         return usageRecordRepository.findById(id).map(existing -> {
             existing.setUsageDate(usageRecord.getUsageDate());
             existing.setDurationMinutes(usageRecord.getDurationMinutes());
             existing.setScenario(usageRecord.getScenario());
             existing.setRemark(usageRecord.getRemark());
-            if (usageRecord.getDevice() != null && usageRecord.getDevice().getId() != null) {
-                Device device = deviceRepository.findById(usageRecord.getDevice().getId())
+            Long resolvedDeviceId = deviceId;
+            if (resolvedDeviceId == null && usageRecord.getDevice() != null && usageRecord.getDevice().getId() != null) {
+                resolvedDeviceId = usageRecord.getDevice().getId();
+            }
+            if (resolvedDeviceId != null) {
+                Device device = deviceRepository.findById(resolvedDeviceId)
                         .orElseThrow(() -> new IllegalArgumentException("Device not found"));
+                if (device.getStatus() == DeviceStatus.RETIRED) {
+                    throw new IllegalStateException("退役设备不允许关联使用记录");
+                }
                 existing.setDevice(device);
             }
             return usageRecordRepository.save(existing);

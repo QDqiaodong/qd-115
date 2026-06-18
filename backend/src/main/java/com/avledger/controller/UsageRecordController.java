@@ -83,8 +83,11 @@ public class UsageRecordController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UsageRecord> update(@PathVariable Long id, @RequestBody UsageRecord usageRecord) {
-        return usageRecordService.update(id, usageRecord)
+    public ResponseEntity<UsageRecord> update(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+        Long deviceId = payload.get("deviceId") != null ? Long.valueOf(payload.get("deviceId").toString()) : null;
+        payload.remove("deviceId");
+        UsageRecord usageRecord = objectMapper.convertValue(payload, UsageRecord.class);
+        return usageRecordService.update(id, usageRecord, deviceId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
