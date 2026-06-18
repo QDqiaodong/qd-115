@@ -102,8 +102,13 @@ public class UsageRecordService {
     public UsageRecord save(UsageRecord usageRecord, Long deviceId) {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new IllegalArgumentException("Device not found with id: " + deviceId));
-        if (device.getStatus() == DeviceStatus.RETIRED) {
-            throw new IllegalStateException("退役设备不允许新增使用记录");
+        DeviceStatus status = device.getStatus();
+        if (status == DeviceStatus.RETIRED || status == DeviceStatus.FAULTY) {
+            throw new IllegalArgumentException(
+                    status == DeviceStatus.RETIRED ? "退役设备不允许新增使用记录" : "故障设备不允许新增使用记录");
+        }
+        if (status == DeviceStatus.MAINTENANCE) {
+            throw new IllegalStateException("设备正在保养中，暂时无法新增使用记录，请待保养完成后再操作");
         }
         usageRecord.setDevice(device);
         return usageRecordRepository.save(usageRecord);
@@ -123,8 +128,13 @@ public class UsageRecordService {
             if (resolvedDeviceId != null) {
                 Device device = deviceRepository.findById(resolvedDeviceId)
                         .orElseThrow(() -> new IllegalArgumentException("Device not found"));
-                if (device.getStatus() == DeviceStatus.RETIRED) {
-                    throw new IllegalStateException("退役设备不允许关联使用记录");
+                DeviceStatus status = device.getStatus();
+                if (status == DeviceStatus.RETIRED || status == DeviceStatus.FAULTY) {
+                    throw new IllegalArgumentException(
+                            status == DeviceStatus.RETIRED ? "退役设备不允许关联使用记录" : "故障设备不允许关联使用记录");
+                }
+                if (status == DeviceStatus.MAINTENANCE) {
+                    throw new IllegalStateException("设备正在保养中，暂时无法关联使用记录，请待保养完成后再操作");
                 }
                 existing.setDevice(device);
             }
