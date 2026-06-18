@@ -53,7 +53,14 @@ public class FirmwareRecordService {
             if (firmwareRecord.getDevice() != null && firmwareRecord.getDevice().getId() != null) {
                 Device device = deviceRepository.findById(firmwareRecord.getDevice().getId())
                         .orElseThrow(() -> new IllegalArgumentException("Device not found"));
+                if (device.getStatus() == DeviceStatus.RETIRED) {
+                    throw new IllegalStateException("退役设备不允许关联固件记录");
+                }
                 existing.setDevice(device);
+            } else {
+                if (existing.getDevice() != null && existing.getDevice().getStatus() == DeviceStatus.RETIRED) {
+                    throw new IllegalStateException("退役设备不允许关联固件记录");
+                }
             }
             return firmwareRecordRepository.save(existing);
         });

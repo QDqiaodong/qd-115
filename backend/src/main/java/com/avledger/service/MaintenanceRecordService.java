@@ -67,6 +67,10 @@ public class MaintenanceRecordService {
                     throw new IllegalStateException("退役设备不允许关联保养记录");
                 }
                 existing.setDevice(device);
+            } else {
+                if (existing.getDevice() != null && existing.getDevice().getStatus() == DeviceStatus.RETIRED) {
+                    throw new IllegalStateException("退役设备不允许关联保养记录");
+                }
             }
             return maintenanceRecordRepository.save(existing);
         });
