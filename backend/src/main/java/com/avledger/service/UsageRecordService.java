@@ -153,61 +153,64 @@ public class UsageRecordService {
         return false;
     }
 
+    private List<Device> filterDevices(DeviceType deviceType, String normalizedLocation) {
+        List<Device> allDevices = deviceRepository.findAll();
+        return allDevices.stream()
+                .filter(d -> deviceType == null || d.getDeviceType() == deviceType)
+                .filter(d -> {
+                    if (normalizedLocation == null) {
+                        return true;
+                    }
+                    String deviceLocation = d.getLocation();
+                    if (deviceLocation == null || deviceLocation.isBlank()) {
+                        return false;
+                    }
+                    return LocationUtils.normalizeLocation(deviceLocation).equals(normalizedLocation);
+                })
+                .collect(Collectors.toList());
+    }
+
+    private String normalizeLocation(String location) {
+        return (location != null && !location.isBlank())
+                ? LocationUtils.normalizeLocation(location)
+                : null;
+    }
+
     public List<Map<String, Object>> getSceneDistribution(DeviceType deviceType, String location) {
-        String normalizedLocation = (location != null && !location.isBlank()) 
-            ? LocationUtils.normalizeLocation(location) 
-            : null;
-        List<Object[]> rawData = usageRecordRepository.sumDurationByScene(deviceType, normalizedLocation);
-        
+        String normalizedLocation = normalizeLocation(location);
+
         Map<String, Integer> scenarioMap = new HashMap<>();
         int totalMinutes = 0;
-        
-        if (normalizedLocation != null) {
-            List<Device> allDevices = deviceRepository.findAll();
-            List<Long> matchingDeviceIds = allDevices.stream()
-                .filter(d -> d.getLocation() != null && !d.getLocation().isBlank())
-                .filter(d -> LocationUtils.normalizeLocation(d.getLocation()).equals(normalizedLocation))
-                .filter(d -> deviceType == null || d.getDeviceType() == deviceType)
-                .map(Device::getId)
-                .collect(java.util.stream.Collectors.toList());
-            
-            if (!matchingDeviceIds.isEmpty()) {
-                for (Long deviceId : matchingDeviceIds) {
-                    List<UsageRecord> records = usageRecordRepository.findByDeviceIdOrderByUsageDateDesc(deviceId);
-                    for (UsageRecord record : records) {
-                        String scenario = record.getScenario() != null ? record.getScenario() : "未分类";
-                        int minutes = record.getDurationMinutes() != null ? record.getDurationMinutes() : 0;
-                        scenarioMap.put(scenario, scenarioMap.getOrDefault(scenario, 0) + minutes);
-                        totalMinutes += minutes;
-                    }
-                }
-            }
-        } else {
-            for (Object[] row : rawData) {
-                String scenario = row[0] != null ? row[0].toString() : "未分类";
-                int minutes = ((Number) row[1]).intValue();
-                scenarioMap.put(scenario, minutes);
+
+        List<Device> matchingDevices = filterDevices(deviceType, normalizedLocation);
+
+        for (Device device : matchingDevices) {
+            List<UsageRecord> records = usageRecordRepository.findByDeviceIdOrderByUsageDateDesc(device.getId());
+            for (UsageRecord record : records) {
+                String scenario = record.getScenario() != null ? record.getScenario() : "未分类";
+                int minutes = record.getDurationMinutes() != null ? record.getDurationMinutes() : 0;
+                scenarioMap.put(scenario, scenarioMap.getOrDefault(scenario, 0) + minutes);
                 totalMinutes += minutes;
             }
         }
-        
+
         List<Map<String, Object>> items = new ArrayList<>();
         List<Map.Entry<String, Integer>> sortedEntries = new ArrayList<>(scenarioMap.entrySet());
         sortedEntries.sort((a, b) -> b.getValue() - a.getValue());
-        
+
         for (Map.Entry<String, Integer> entry : sortedEntries) {
             Map<String, Object> item = new HashMap<>();
             item.put("scenario", entry.getKey());
             item.put("durationMinutes", entry.getValue());
             items.add(item);
         }
-        
+
         for (Map<String, Object> item : items) {
             int minutes = (int) item.get("durationMinutes");
             double percent = totalMinutes > 0 ? Math.round(minutes * 1000.0 / totalMinutes) / 10.0 : 0.0;
             item.put("percent", percent);
         }
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("totalMinutes", totalMinutes);
         result.put("items", items);
@@ -222,30 +225,15 @@ public class UsageRecordService {
     }
 
     public Map<String, Object> getDeviceUsageSummary(DeviceType deviceType, String location) {
-        String normalizedLocation = (location != null && !location.isBlank()) 
-            ? LocationUtils.normalizeLocation(location) 
-            : null;
+        String normalizedLocation = normalizeLocation(location);
         
         Map<Long, Map<String, Object>> deviceSummaryMap = new java.util.LinkedHashMap<>();
         Map<String, Map<String, Object>> deviceTypeSummaryMap = new java.util.LinkedHashMap<>();
         Map<String, Map<String, Object>> locationSummaryMap = new java.util.LinkedHashMap<>();
         
-        List<Device> allDevices = deviceRepository.findAll();
+        List<Device> matchingDevices = filterDevices(deviceType, normalizedLocation);
         
-        for (Device device : allDevices) {
-            if (deviceType != null && device.getDeviceType() != deviceType) {
-                continue;
-            }
-            if (normalizedLocation != null) {
-                String deviceLocation = device.getLocation();
-                if (deviceLocation == null || deviceLocation.isBlank()) {
-                    continue;
-                }
-                String deviceNormalizedLocation = LocationUtils.normalizeLocation(deviceLocation);
-                if (!deviceNormalizedLocation.equals(normalizedLocation)) {
-                    continue;
-                }
-            }
+        for (Device device : matchingDevices) {
             
             List<UsageRecord> records = usageRecordRepository.findByDeviceIdOrderByUsageDateDesc(device.getId());
             if (records.isEmpty()) {

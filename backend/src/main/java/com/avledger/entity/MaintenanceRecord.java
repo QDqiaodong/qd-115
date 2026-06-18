@@ -9,13 +9,16 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "maintenance_record")
+@Table(name = "maintenance_record", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_device_type_date", columnNames = {"device_id", "maintenance_type", "maintenance_date"})
+})
 public class MaintenanceRecord {
 
     @Id
@@ -31,8 +34,12 @@ public class MaintenanceRecord {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime maintenanceTime;
 
+    @Column(name = "maintenance_date", nullable = false)
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate maintenanceDate;
+
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name = "maintenance_type", nullable = false, length = 20)
     private MaintenanceType maintenanceType;
 
     @Column(columnDefinition = "TEXT", nullable = false)
@@ -48,4 +55,12 @@ public class MaintenanceRecord {
     @Column(updatable = false)
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
+
+    @PrePersist
+    @PreUpdate
+    private void syncMaintenanceDate() {
+        if (this.maintenanceTime != null) {
+            this.maintenanceDate = this.maintenanceTime.toLocalDate();
+        }
+    }
 }

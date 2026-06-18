@@ -26,7 +26,7 @@ public interface MaintenanceRecordRepository extends JpaRepository<MaintenanceRe
 
     @Query("SELECT m FROM MaintenanceRecord m WHERE m.device.id = :deviceId " +
            "AND m.maintenanceType = :maintenanceType " +
-           "AND FUNCTION('DATE', m.maintenanceTime) = :maintenanceDate " +
+           "AND m.maintenanceDate = :maintenanceDate " +
            "AND (:excludeId IS NULL OR m.id != :excludeId) " +
            "ORDER BY m.maintenanceTime DESC")
     List<MaintenanceRecord> findDuplicateRecords(

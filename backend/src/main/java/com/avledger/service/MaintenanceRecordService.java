@@ -10,6 +10,7 @@ import com.avledger.repository.MaintenanceRecordRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,10 +47,16 @@ public class MaintenanceRecordService {
         if (device.getStatus() == DeviceStatus.RETIRED) {
             throw new IllegalStateException("退役设备不允许新增保养记录");
         }
-        checkDuplicateMaintenance(deviceId, maintenanceRecord.getMaintenanceType(), 
+        checkDuplicateMaintenance(deviceId, maintenanceRecord.getMaintenanceType(),
                 maintenanceRecord.getMaintenanceTime(), null);
         maintenanceRecord.setDevice(device);
-        return maintenanceRecordRepository.save(maintenanceRecord);
+        try {
+            return maintenanceRecordRepository.save(maintenanceRecord);
+        } catch (DataIntegrityViolationException e) {
+            throwDuplicateMaintenanceException(deviceId, maintenanceRecord.getMaintenanceType(),
+                    maintenanceRecord.getMaintenanceTime(), null);
+            throw e;
+        }
     }
 
     @CacheEvict(value = "maintenanceCycles", allEntries = true)
@@ -78,13 +85,19 @@ public class MaintenanceRecordService {
                     throw new IllegalStateException("退役设备不允许关联保养记录");
                 }
             }
-            Long checkDeviceId = resolvedDeviceId != null ? resolvedDeviceId : 
+            Long checkDeviceId = resolvedDeviceId != null ? resolvedDeviceId :
                     (existing.getDevice() != null ? existing.getDevice().getId() : null);
             if (checkDeviceId != null) {
                 checkDuplicateMaintenance(checkDeviceId, maintenanceRecord.getMaintenanceType(),
                         maintenanceRecord.getMaintenanceTime(), id);
             }
-            return maintenanceRecordRepository.save(existing);
+            try {
+                return maintenanceRecordRepository.save(existing);
+            } catch (DataIntegrityViolationException e) {
+                throwDuplicateMaintenanceException(checkDeviceId, maintenanceRecord.getMaintenanceType(),
+                        maintenanceRecord.getMaintenanceTime(), id);
+                throw e;
+            }
         });
     }
 
@@ -98,7 +111,21 @@ public class MaintenanceRecordService {
         return false;
     }
 
-    private void checkDuplicateMaintenance(Long deviceId, MaintenanceType maintenanceType, 
+    private void throwDuplicateMaintenanceException(Long deviceId, MaintenanceType maintenanceType,
+            LocalDateTime maintenanceTime, Long excludeId) {
+        if (deviceId == null || maintenanceType == null || maintenanceTime == null) {
+            return;
+        }
+        LocalDate maintenanceDate = maintenanceTime.toLocalDate();
+        List<MaintenanceRecord> duplicates = maintenanceRecordRepository.findDuplicateRecords(
+                deviceId, maintenanceType, maintenanceDate, excludeId);
+        String typeLabel = getMaintenanceTypeLabel(maintenanceType);
+        String message = String.format("该设备在 %s 已存在%s记录，请勿重复提交",
+                maintenanceDate, typeLabel);
+        throw new DuplicateMaintenanceException(message, duplicates);
+    }
+
+    private void checkDuplicateMaintenance(Long deviceId, MaintenanceType maintenanceType,
             LocalDateTime maintenanceTime, Long excludeId) {
         if (deviceId == null || maintenanceType == null || maintenanceTime == null) {
             return;
@@ -108,7 +135,7 @@ public class MaintenanceRecordService {
                 deviceId, maintenanceType, maintenanceDate, excludeId);
         if (!duplicates.isEmpty()) {
             String typeLabel = getMaintenanceTypeLabel(maintenanceType);
-            String message = String.format("该设备在 %s 已存在%s记录，请勿重复提交", 
+            String message = String.format("该设备在 %s 已存在%s记录，请勿重复提交",
                     maintenanceDate, typeLabel);
             throw new DuplicateMaintenanceException(message, duplicates);
         }

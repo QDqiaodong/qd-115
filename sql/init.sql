@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS maintenance_record (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     device_id BIGINT NOT NULL COMMENT '设备ID',
     maintenance_time DATETIME NOT NULL COMMENT '养护时间',
+    maintenance_date DATE NOT NULL COMMENT '养护日期（用于唯一约束）',
     maintenance_type VARCHAR(20) NOT NULL COMMENT '养护类型',
     content TEXT NOT NULL COMMENT '养护内容',
     operator VARCHAR(50) COMMENT '操作人',
@@ -66,6 +67,7 @@ CREATE TABLE IF NOT EXISTS maintenance_record (
     INDEX idx_maintenance_type (maintenance_type),
     INDEX idx_maintenance_time (maintenance_time),
     INDEX idx_device_maintenance (device_id, maintenance_type),
+    UNIQUE KEY uk_device_type_date (device_id, maintenance_type, maintenance_date),
     CONSTRAINT fk_maintenance_device FOREIGN KEY (device_id) REFERENCES device(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='日常养护记录';
 
@@ -116,14 +118,14 @@ INSERT INTO repair_record (device_id, repair_time, symptom, cause, fix_method, f
 (5, '2024-06-01 09:00:00', '环绕音效失真, 单侧无声', '分频器电容损坏', '更换分频器组件', 'PARTIAL', '授权维修点', 320.00, '正在维修中');
 
 -- 预置养护记录
-INSERT INTO maintenance_record (device_id, maintenance_time, maintenance_type, content, operator, remark) VALUES
-(1, '2024-05-01 10:00:00', 'CLEANING', '擦拭音响网罩, 清理扬声器灰尘, 检查连接线', '户主', '定期月度养护'),
-(2, '2024-05-15 14:00:00', 'FIRMWARE', '升级投影仪固件至v3.2.1版本, 优化4K HDR显示效果', '户主', '官方固件推送更新'),
-(3, '2024-04-20 16:00:00', 'CLEANING', '清洁光盘仓激光头, 擦拭机身外壳', '户主', '蓝光机季度养护'),
-(4, '2024-05-20 11:00:00', 'CABLE', '整理功放背部HDMI线缆, 重新插拔并绑扎', '户主', '新增设备后整理线缆'),
-(7, '2024-06-01 09:00:00', 'FIRMWARE', '升级tvOS至17.5版本, 更新应用程序', '户主', '系统自动更新'),
-(8, '2024-06-05 20:00:00', 'CLEANING', '清理音响出风口灰尘, 检查散热情况', '户主', '夏季高温前检查'),
-(2, '2024-06-10 15:00:00', 'CLEANING', '清洁投影镜头, 使用专用镜头布擦拭', '户主', '镜头出现轻微指纹');
+INSERT INTO maintenance_record (device_id, maintenance_time, maintenance_date, maintenance_type, content, operator, remark) VALUES
+(1, '2024-05-01 10:00:00', '2024-05-01', 'CLEANING', '擦拭音响网罩, 清理扬声器灰尘, 检查连接线', '户主', '定期月度养护'),
+(2, '2024-05-15 14:00:00', '2024-05-15', 'FIRMWARE', '升级投影仪固件至v3.2.1版本, 优化4K HDR显示效果', '户主', '官方固件推送更新'),
+(3, '2024-04-20 16:00:00', '2024-04-20', 'CLEANING', '清洁光盘仓激光头, 擦拭机身外壳', '户主', '蓝光机季度养护'),
+(4, '2024-05-20 11:00:00', '2024-05-20', 'CABLE', '整理功放背部HDMI线缆, 重新插拔并绑扎', '户主', '新增设备后整理线缆'),
+(7, '2024-06-01 09:00:00', '2024-06-01', 'FIRMWARE', '升级tvOS至17.5版本, 更新应用程序', '户主', '系统自动更新'),
+(8, '2024-06-05 20:00:00', '2024-06-05', 'CLEANING', '清理音响出风口灰尘, 检查散热情况', '户主', '夏季高温前检查'),
+(2, '2024-06-10 15:00:00', '2024-06-10', 'CLEANING', '清洁投影镜头, 使用专用镜头布擦拭', '户主', '镜头出现轻微指纹');
 
 -- 预置固件版本记录
 INSERT INTO firmware_record (device_id, firmware_version, update_time, description, operator, remark) VALUES
