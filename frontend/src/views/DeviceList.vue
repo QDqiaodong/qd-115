@@ -132,6 +132,11 @@
                   <div class="overview-card-label">最近保养</div>
                   <div class="overview-card-value overview-green">{{ overviewStats.lastMaintenanceTime }}</div>
                   <div class="overview-card-sub">累计 {{ overviewStats.maintenanceCount }} 次养护</div>
+                  <div v-if="overviewStats.lastMaintenanceType" class="last-mt-type">
+                    <el-tag :type="mtTagColor(overviewStats.lastMaintenanceType)" size="small" effect="light">
+                      {{ mtMap[overviewStats.lastMaintenanceType] || overviewStats.lastMaintenanceType }}
+                    </el-tag>
+                  </div>
                 </div>
               </el-col>
             </el-row>
@@ -362,6 +367,7 @@ const overviewStats = ref({
   totalDuration: '0时0分',
   lastRepairTime: '-',
   lastMaintenanceTime: '-',
+  lastMaintenanceType: '',
   repairCount: 0,
   maintenanceCount: 0,
   usageCount: 0
@@ -477,10 +483,16 @@ const calcOverviewStats = (usage, repair, maintenance, usageStats) => {
     totalDuration: formatDuration(totalMin),
     lastRepairTime: sortedRepair.length > 0 ? formatDateTimeShort(sortedRepair[0].repairTime) : '暂无记录',
     lastMaintenanceTime: sortedMaintenance.length > 0 ? formatDateTimeShort(sortedMaintenance[0].maintenanceTime) : '暂无记录',
+    lastMaintenanceType: sortedMaintenance.length > 0 ? sortedMaintenance[0].maintenanceType : '',
     repairCount: repair.length,
     maintenanceCount: maintenance.length,
     usageCount: usage.length
   }
+}
+
+const mtTagColor = (type) => {
+  const map = { CLEANING: 'success', CABLE: 'primary', FIRMWARE: 'warning', OTHER: 'info' }
+  return map[type] || 'info'
 }
 
 const getOverviewTimeline = () => {
@@ -835,6 +847,10 @@ onMounted(fetchDevices)
 .overview-card-sub {
   font-size: 12px;
   color: #c0c4cc;
+}
+
+.last-mt-type {
+  margin-top: 8px;
 }
 
 .next-maintenance-section {

@@ -33,10 +33,18 @@
           <el-icon><Warning /></el-icon>
           <span>检修登记</span>
         </el-menu-item>
-        <el-menu-item index="/maintenance">
-          <el-icon><Tools /></el-icon>
-          <span>养护记录</span>
-        </el-menu-item>
+        <el-sub-menu index="maintenance-group">
+          <template #title>
+            <el-icon><Tools /></el-icon>
+            <span>保养管理</span>
+          </template>
+          <el-menu-item index="/maintenance">
+            <span>养护记录</span>
+          </el-menu-item>
+          <el-menu-item index="/maintenance-checklist">
+            <span>流程清单</span>
+          </el-menu-item>
+        </el-sub-menu>
         <el-menu-item index="/cost-statistics">
           <el-icon><TrendCharts /></el-icon>
           <span>费用统计</span>
