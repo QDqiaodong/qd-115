@@ -109,43 +109,72 @@ public class DeviceService {
 
     @CacheEvict(value = {"devices", "deviceCategories"}, allEntries = true)
     @Transactional
-    public List<Device> batchUpdate(List<Device> devices) {
-        List<Device> result = new ArrayList<>();
+    public Map<String, Object> batchUpdate(List<Device> devices) {
+        List<Device> success = new ArrayList<>();
+        List<Map<String, Object>> failed = new ArrayList<>();
         for (Device device : devices) {
-            if (device.getId() == null) continue;
+            if (device.getId() == null) {
+                Map<String, Object> fail = new LinkedHashMap<>();
+                fail.put("id", device.getId());
+                fail.put("name", device.getName());
+                fail.put("reason", "设备ID缺失");
+                failed.add(fail);
+                continue;
+            }
             Device existing = deviceRepository.findById(device.getId()).orElse(null);
-            if (existing == null) continue;
+            if (existing == null) {
+                Map<String, Object> fail = new LinkedHashMap<>();
+                fail.put("id", device.getId());
+                fail.put("name", device.getName());
+                fail.put("reason", "设备不存在");
+                failed.add(fail);
+                continue;
+            }
 
-            if (device.getStatus() != null && device.getStatus() != existing.getStatus()) {
-                validateTransition(existing.getStatus(), device.getStatus());
-                existing.setStatus(device.getStatus());
+            try {
+                if (device.getStatus() != null && device.getStatus() != existing.getStatus()) {
+                    validateTransition(existing.getStatus(), device.getStatus());
+                    existing.setStatus(device.getStatus());
+                }
+                if (device.getName() != null) {
+                    existing.setName(device.getName());
+                }
+                if (device.getModel() != null) {
+                    existing.setModel(device.getModel());
+                }
+                if (device.getDeviceType() != null) {
+                    existing.setDeviceType(device.getDeviceType());
+                }
+                if (device.getPurchaseDate() != null) {
+                    existing.setPurchaseDate(device.getPurchaseDate());
+                }
+                if (device.getLocation() != null) {
+                    existing.setLocation(LocationUtils.normalizeLocation(device.getLocation()));
+                }
+                if (device.getHardwareSpecs() != null) {
+                    existing.setHardwareSpecs(device.getHardwareSpecs());
+                }
+                if (device.getLampInstallDate() != null) {
+                    existing.setLampInstallDate(device.getLampInstallDate());
+                }
+                if (device.getLampReplaceHours() != null) {
+                    existing.setLampReplaceHours(device.getLampReplaceHours());
+                }
+                success.add(deviceRepository.save(existing));
+            } catch (IllegalStateException e) {
+                Map<String, Object> fail = new LinkedHashMap<>();
+                fail.put("id", existing.getId());
+                fail.put("name", existing.getName());
+                fail.put("reason", e.getMessage());
+                failed.add(fail);
             }
-            if (device.getName() != null) {
-                existing.setName(device.getName());
-            }
-            if (device.getModel() != null) {
-                existing.setModel(device.getModel());
-            }
-            if (device.getDeviceType() != null) {
-                existing.setDeviceType(device.getDeviceType());
-            }
-            if (device.getPurchaseDate() != null) {
-                existing.setPurchaseDate(device.getPurchaseDate());
-            }
-            if (device.getLocation() != null) {
-                existing.setLocation(LocationUtils.normalizeLocation(device.getLocation()));
-            }
-            if (device.getHardwareSpecs() != null) {
-                existing.setHardwareSpecs(device.getHardwareSpecs());
-            }
-            if (device.getLampInstallDate() != null) {
-                existing.setLampInstallDate(device.getLampInstallDate());
-            }
-            if (device.getLampReplaceHours() != null) {
-                existing.setLampReplaceHours(device.getLampReplaceHours());
-            }
-            result.add(deviceRepository.save(existing));
         }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("success", success);
+        result.put("failed", failed);
+        result.put("totalCount", devices.size());
+        result.put("successCount", success.size());
+        result.put("failedCount", failed.size());
         return result;
     }
 }

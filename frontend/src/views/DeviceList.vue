@@ -791,12 +791,24 @@ const openDetail = async (device) => {
 
 const handleBatchUpdate = async (data) => {
   try {
-    await batchUpdateDevices(data)
-    ElMessage.success('批量更新成功')
+    const res = await batchUpdateDevices(data)
+    const successCount = res?.successCount ?? 0
+    const failedCount = res?.failedCount ?? 0
+    const failed = res?.failed ?? []
     batchEditVisible.value = false
     fetchDevices()
+    if (failedCount === 0) {
+      ElMessage.success(`批量更新成功，共 ${successCount} 台设备`)
+    } else if (successCount === 0) {
+      const reasons = failed.map(f => `${f.name || '设备#' + f.id}: ${f.reason}`).join('；')
+      ElMessage.error(`批量更新全部失败：${reasons}`)
+    } else {
+      const reasons = failed.map(f => `${f.name || '设备#' + f.id}: ${f.reason}`).join('；')
+      ElMessage.warning(`部分更新成功（${successCount} 台），${failedCount} 台失败：${reasons}`)
+    }
   } catch (e) {
-    ElMessage.error('批量更新失败')
+    const interceptorMsg = e?.response?.data?.message
+    ElMessage.error(interceptorMsg || '批量更新失败')
   }
 }
 

@@ -35,8 +35,31 @@ public class DeviceController {
     private final LampLifeService lampLifeService;
 
     @GetMapping
-    public ResponseEntity<List<Device>> findAll() {
-        return ResponseEntity.ok(deviceService.findAll());
+    public ResponseEntity<List<Map<String, Object>>> findAll() {
+        List<Device> devices = deviceService.findAll();
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Device d : devices) {
+            Map<String, Object> item = deviceToMap(d);
+            item.put("healthScore", healthScoreService.calculateHealthScore(d));
+            result.add(item);
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    private Map<String, Object> deviceToMap(Device d) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", d.getId());
+        item.put("name", d.getName());
+        item.put("model", d.getModel());
+        item.put("deviceType", d.getDeviceType().name());
+        item.put("status", d.getStatus().name());
+        item.put("purchaseDate", d.getPurchaseDate() != null ? d.getPurchaseDate().toString() : null);
+        item.put("location", d.getLocation());
+        item.put("hardwareSpecs", d.getHardwareSpecs());
+        item.put("lampInstallDate", d.getLampInstallDate() != null ? d.getLampInstallDate().toString() : null);
+        item.put("lampReplaceHours", d.getLampReplaceHours());
+        item.put("createdAt", d.getCreatedAt() != null ? d.getCreatedAt().toString() : null);
+        return item;
     }
 
     @GetMapping("/{id}")
@@ -124,7 +147,7 @@ public class DeviceController {
     }
 
     @PutMapping("/batch")
-    public ResponseEntity<List<Device>> batchUpdate(@RequestBody List<Device> devices) {
+    public ResponseEntity<Map<String, Object>> batchUpdate(@RequestBody List<Device> devices) {
         return ResponseEntity.ok(deviceService.batchUpdate(devices));
     }
 
